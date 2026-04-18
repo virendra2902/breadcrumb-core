@@ -1,6 +1,6 @@
 {
   "name": "breadcrumb-core",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Zero-config breadcrumbs from your route config. Async labels, SEO JSON-LD, and adapters for React Router, Next.js, and TanStack Router.",
   "author": "virendra2902 <https://github.com/virendra2902>",
   "license": "MIT",
