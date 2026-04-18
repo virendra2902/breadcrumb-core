@@ -1,0 +1,8 @@
+{
+  // Use the workspace TypeScript install (v5.x) so VS Code honours
+  // "moduleResolution": "bundler" and "jsxImportSource" from tsconfig.json.
+  // Without this VS Code falls back to its bundled (older) TypeScript and
+  // shows false-positive JSX type errors like "Property 'span' does not exist".
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true
+}
