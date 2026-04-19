@@ -1,12 +1,12 @@
-# Contributing to auto-breadcrumb
+# Contributing to breadcrumb-core
 
 Thanks for your interest in contributing! Here's how to get started.
 
 ## Development setup
 
 ```bash
-git clone https://github.com/virendra2902/auto-breadcrumb.git
-cd auto-breadcrumb
+git clone https://github.com/virendra2902/breadcrumb-core.git
+cd breadcrumb-core
 npm install
 npm run dev      # watch mode — rebuilds on change
 npm run lint     # TypeScript type-check

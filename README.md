@@ -1,14 +1,14 @@
-# auto-breadcrumb 🧭
+# breadcrumb-core 🧭
 
 > Zero-config breadcrumbs from your route config — async labels, SEO JSON-LD, and adapters for React Router, Next.js, and TanStack Router.
 
-[![npm version](https://img.shields.io/npm/v/auto-breadcrumb.svg)](https://www.npmjs.com/package/auto-breadcrumb)
-[![npm downloads](https://img.shields.io/npm/dm/auto-breadcrumb.svg)](https://www.npmjs.com/package/auto-breadcrumb)
-[![license](https://img.shields.io/npm/l/auto-breadcrumb.svg)](https://github.com/virendra2902/auto-breadcrumb/blob/main/LICENSE)
-[![CI](https://github.com/virendra2902/auto-breadcrumb/actions/workflows/ci.yml/badge.svg)](https://github.com/virendra2902/auto-breadcrumb/actions)
+[![npm version](https://img.shields.io/npm/v/auto-breadcrumb.svg)](https://www.npmjs.com/package/breadcrumb-core)
+[![npm downloads](https://img.shields.io/npm/dm/auto-breadcrumb.svg)](https://www.npmjs.com/package/breadcrumb-core)
+[![license](https://img.shields.io/npm/l/auto-breadcrumb.svg)](https://github.com/virendra2902/breadcrumb-core/blob/main/LICENSE)
+[![CI](https://github.com/virendra2902/auto-breadcrumb/actions/workflows/ci.yml/badge.svg)](https://github.com/virendra2902/breadcrumb-core/actions)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue.svg)](https://www.typescriptlang.org/)
 
-**[🌐 Live Demo](https://virendra2902.github.io/auto-breadcrumb)** · [npm](https://www.npmjs.com/package/auto-breadcrumb) · [GitHub](https://github.com/virendra2902/auto-breadcrumb)
+**[🌐 Live Demo](https://virendra2902.github.io/breadcrumb-core)** · [npm](https://www.npmjs.com/package/breadcrumb-core) · [GitHub](https://github.com/virendra2902/breadcrumb-core)
 
 ---
 
@@ -49,11 +49,11 @@ export const routes = [
 ## Installation
 
 ```bash
-npm install auto-breadcrumb
+npm install breadcrumb-core
 # or
-yarn add auto-breadcrumb
+yarn add breadcrumb-core
 # or
-pnpm add auto-breadcrumb
+pnpm add breadcrumb-core
 ```
 
 **Peer dependencies:** React ≥ 17
@@ -67,7 +67,7 @@ pnpm add auto-breadcrumb
 ```tsx
 // main.tsx
 import { BrowserRouter } from 'react-router-dom'
-import { BreadcrumbProvider } from 'auto-breadcrumb/react-router'
+import { BreadcrumbProvider } from 'breadcrumb-core/react-router'
 import { routes } from './routes'
 
 <BrowserRouter>
@@ -79,7 +79,7 @@ import { routes } from './routes'
 
 ```tsx
 // Any component — no imports needed beyond this one
-import { AutoBreadcrumb } from 'auto-breadcrumb/react-router'
+import { AutoBreadcrumb } from 'breadcrumb-core/react-router'
 
 export function Header() {
   return <AutoBreadcrumb separator="/" />
@@ -90,7 +90,7 @@ export function Header() {
 
 ```tsx
 // app/layout.tsx
-import { BreadcrumbProvider } from 'auto-breadcrumb/next'
+import { BreadcrumbProvider } from 'breadcrumb-core/next'
 import { routes } from '@/routes'
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -108,7 +108,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 ```tsx
 // Any page
-import { AutoBreadcrumb } from 'auto-breadcrumb/next'
+import { AutoBreadcrumb } from 'breadcrumb-core/next'
 
 export default function ProductPage() {
   return (
@@ -124,7 +124,7 @@ export default function ProductPage() {
 
 ```tsx
 // __root.tsx
-import { BreadcrumbProvider } from 'auto-breadcrumb/tanstack-router'
+import { BreadcrumbProvider } from 'breadcrumb-core/tanstack-router'
 
 export function RootComponent() {
   return (
@@ -140,7 +140,7 @@ export function RootComponent() {
 ## Route Config
 
 ```ts
-import type { RouteConfig } from 'auto-breadcrumb'
+import type { RouteConfig } from 'breadcrumb-core'
 
 const routes: RouteConfig[] = [
   // Static label
@@ -216,7 +216,7 @@ Automatically injects a `BreadcrumbList` structured data block for Google rich r
 ### 🎨 Headless mode
 
 ```tsx
-import { useBreadcrumb } from 'auto-breadcrumb/headless'
+import { useBreadcrumb } from 'breadcrumb-core/headless'
 
 function MyBreadcrumb() {
   const items = useBreadcrumb()
@@ -238,7 +238,7 @@ function MyBreadcrumb() {
 ### 💅 Pre-styled component
 
 ```tsx
-import { StyledBreadcrumb, BreadcrumbSkeleton } from 'auto-breadcrumb/ui'
+import { StyledBreadcrumb, BreadcrumbSkeleton } from 'breadcrumb-core/ui'
 
 <StyledBreadcrumb
   theme="dark"
@@ -308,7 +308,7 @@ interface BreadcrumbItem {
 ### Core utilities (framework-agnostic)
 
 ```ts
-import { matchRoute, buildBreadcrumbs, generateJsonLd, clearLabelCache } from 'auto-breadcrumb'
+import { matchRoute, buildBreadcrumbs, generateJsonLd, clearLabelCache } from 'breadcrumb-core'
 ```
 
 ---
@@ -317,7 +317,7 @@ import { matchRoute, buildBreadcrumbs, generateJsonLd, clearLabelCache } from 'a
 
 | Tool | Async labels | SEO JSON-LD | Multi-router | Headless | Cache |
 |------|:---:|:---:|:---:|:---:|:---:|
-| **auto-breadcrumb** ✦ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **breadcrumb-core** ✦ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | use-react-router-breadcrumbs | ❌ | ❌ | ❌ | ✅ | ❌ |
 | antd Breadcrumb | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Manual per-page | ❌ | ❌ | ✅ | ❌ | ❌ |
@@ -326,11 +326,11 @@ import { matchRoute, buildBreadcrumbs, generateJsonLd, clearLabelCache } from 'a
 
 ## Contributing
 
-Contributions are welcome! Please open an issue or PR on [GitHub](https://github.com/virendra2902/auto-breadcrumb).
+Contributions are welcome! Please open an issue or PR on [GitHub](https://github.com/virendra2902/breadcrumb-core).
 
 ```bash
-git clone https://github.com/virendra2902/auto-breadcrumb.git
-cd auto-breadcrumb
+git clone https://github.com/virendra2902/breadcrumb-core.git
+cd breadcrumb-core
 npm install
 npm run dev    # watch mode build
 npm run lint   # type check
