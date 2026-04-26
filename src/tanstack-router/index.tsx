@@ -1,6 +1,7 @@
 // ─────────────────────────────────────────────
-// auto-breadcrumb · tanstack-router
+// breadcrumb-core · tanstack-router  v2.0.0
 // TanStack Router v1 adapter
+// Peer dep: @tanstack/react-router
 // ─────────────────────────────────────────────
 
 import type { ReactNode } from 'react'
@@ -9,50 +10,38 @@ import {
   AutoBreadcrumb as CoreBreadcrumb,
   useBreadcrumb,
   useBreadcrumbLoading,
+  useBreadcrumbHistory,
   type AutoBreadcrumbProps,
   type BreadcrumbProviderProps as CoreProviderProps,
 } from '../headless'
 import type { RouteConfig, BreadcrumbItem } from '../core'
 
 export interface BreadcrumbProviderProps
-  extends Omit<CoreProviderProps, 'pathname'> {}
+  extends Omit<CoreProviderProps, 'pathname'> { }
 
 /**
  * Wrap your root component once — reads pathname from TanStack Router.
- *
- * Install peer dependency first:
- *   npm install @tanstack/react-router
+ * Peer dependency: npm install @tanstack/react-router
  *
  * @example
  * // __root.tsx
- * import { useRouterState } from '@tanstack/react-router'
  * import { BreadcrumbProvider } from 'auto-breadcrumb/tanstack-router'
- *
  * export function RootComponent() {
- *   return (
- *     <BreadcrumbProvider routes={routes}>
- *       <Outlet />
- *     </BreadcrumbProvider>
- *   )
+ *   return <BreadcrumbProvider routes={routes}><Outlet /></BreadcrumbProvider>
  * }
- *
- * Note: This component calls useRouterState internally via dynamic require.
- * It must be rendered inside a TanStack Router <RouterProvider>.
  */
-export function BreadcrumbProvider({
-  routes,
-  children,
-}: BreadcrumbProviderProps) {
+export function BreadcrumbProvider({ routes, children, ...rest }: BreadcrumbProviderProps) {
   // Dynamic require keeps @tanstack/react-router as a true peer dep —
   // users who don't use TanStack Router won't get a missing-module error
-  // at build time. The adapter only works when the peer is installed.
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { useRouterState } = require('@tanstack/react-router') as {
-    useRouterState: (opts: { select: (s: { location: { pathname: string } }) => string }) => string
+    useRouterState: (opts: {
+      select: (s: { location: { pathname: string } }) => string
+    }) => string
   }
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   return (
-    <CoreProvider routes={routes} pathname={pathname}>
+    <CoreProvider routes={routes} pathname={pathname} {...rest}>
       {children}
     </CoreProvider>
   )
@@ -60,7 +49,7 @@ export function BreadcrumbProvider({
 
 /**
  * Drop-in breadcrumb for TanStack Router.
- * Uses a plain <a> tag — swap renderItem to use TanStack's <Link> if needed.
+ * Pass renderItem to use TanStack's <Link> component.
  *
  * @example
  * import { Link } from '@tanstack/react-router'
@@ -81,5 +70,5 @@ export function AutoBreadcrumb(props: AutoBreadcrumbProps) {
   return <CoreBreadcrumb {...props} renderItem={props.renderItem ?? defaultRenderer} />
 }
 
-export { useBreadcrumb, useBreadcrumbLoading }
+export { useBreadcrumb, useBreadcrumbLoading, useBreadcrumbHistory }
 export type { RouteConfig, BreadcrumbItem, AutoBreadcrumbProps }

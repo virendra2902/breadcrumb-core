@@ -1,6 +1,6 @@
-# breadcrumb-core 🧭
+# breadcrumb-core 🧭🧭
 
-> Zero-config breadcrumbs from your route config — async labels, SEO JSON-LD, and adapters for React Router, Next.js, and TanStack Router.
+> Zero-config breadcrumbs from your route config — async labels, SEO JSON-LD, wildcard routes, navigation history, and adapters for React Router, Next.js, and TanStack Router.
 
 [![npm version](https://img.shields.io/npm/v/auto-breadcrumb.svg)](https://www.npmjs.com/package/breadcrumb-core)
 [![npm downloads](https://img.shields.io/npm/dm/auto-breadcrumb.svg)](https://www.npmjs.com/package/breadcrumb-core)
@@ -8,41 +8,7 @@
 [![CI](https://github.com/virendra2902/auto-breadcrumb/actions/workflows/ci.yml/badge.svg)](https://github.com/virendra2902/breadcrumb-core/actions)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue.svg)](https://www.typescriptlang.org/)
 
-**[🌐 Live Demo](https://virendra2902.github.io/breadcrumb-core)** · [npm](https://www.npmjs.com/package/breadcrumb-core) · [GitHub](https://github.com/virendra2902/breadcrumb-core)
-
----
-
-## The Problem
-
-Every app has this pain — breadcrumbs written by hand on every page, breaking silently when routes change, dynamic segments needing their own fetch logic, and labels duplicated between your router config and your UI.
-
-```tsx
-// ❌ Before — written manually on every page
-<Breadcrumb>
-  <Item>Home</Item>
-  <Item>Products</Item>
-  <Item>{product.name}</Item>  {/* fetch this yourself */}
-  <Item>Reviews</Item>
-</Breadcrumb>
-```
-
-## The Solution
-
-Define your routes once. `<AutoBreadcrumb />` handles the rest — everywhere, forever.
-
-```tsx
-// ✅ routes.ts — define once
-export const routes = [
-  { path: '/',                       label: 'Home' },
-  { path: '/products',               label: 'Products' },
-  { path: '/products/:id',           label: async ({ params }) => getProductName(params.id) },
-  { path: '/products/:id/reviews',   label: 'Reviews' },
-]
-
-// ✅ Any page — zero breadcrumb code
-<AutoBreadcrumb />
-// → Home / Products / iPhone 15 / Reviews
-```
+**[🌐 Live Demo](https://virendra2902.github.io/breadcrumb-core)** · [npm](https://www.npmjs.com/package/breadcrumb-core) · [GitHub](https://github.com/virendra2902/breadcrumb-core) · [Changelog](./CHANGELOG.md)
 
 ---
 
@@ -50,10 +16,6 @@ export const routes = [
 
 ```bash
 npm install breadcrumb-core
-# or
-yarn add breadcrumb-core
-# or
-pnpm add breadcrumb-core
 ```
 
 **Peer dependencies:** React ≥ 17
@@ -75,15 +37,10 @@ import { routes } from './routes'
     <App />
   </BreadcrumbProvider>
 </BrowserRouter>
-```
 
-```tsx
-// Any component — no imports needed beyond this one
+// Any component
 import { AutoBreadcrumb } from 'breadcrumb-core/react-router'
-
-export function Header() {
-  return <AutoBreadcrumb separator="/" />
-}
+<AutoBreadcrumb separator="/" />
 ```
 
 ### Next.js App Router
@@ -93,46 +50,17 @@ export function Header() {
 import { BreadcrumbProvider } from 'breadcrumb-core/next'
 import { routes } from '@/routes'
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="en">
-      <body>
-        <BreadcrumbProvider routes={routes}>
-          {children}
-        </BreadcrumbProvider>
-      </body>
-    </html>
-  )
-}
-```
-
-```tsx
-// Any page
-import { AutoBreadcrumb } from 'breadcrumb-core/next'
-
-export default function ProductPage() {
-  return (
-    <>
-      <AutoBreadcrumb injectJsonLd syncDocumentTitle appName="MyShop" />
-      <main>...</main>
-    </>
-  )
-}
-```
-
-### TanStack Router
-
-```tsx
-// __root.tsx
-import { BreadcrumbProvider } from 'breadcrumb-core/tanstack-router'
-
-export function RootComponent() {
+export default function RootLayout({ children }) {
   return (
     <BreadcrumbProvider routes={routes}>
-      <Outlet />
+      {children}
     </BreadcrumbProvider>
   )
 }
+
+// Any page
+import { AutoBreadcrumb } from 'breadcrumb-core/next'
+<AutoBreadcrumb injectJsonLd syncDocumentTitle appName="MyApp" />
 ```
 
 ---
@@ -143,107 +71,114 @@ export function RootComponent() {
 import type { RouteConfig } from 'breadcrumb-core'
 
 const routes: RouteConfig[] = [
-  // Static label
   { path: '/', label: 'Home' },
 
-  // Static string for a nested path
   { path: '/products', label: 'Products' },
 
-  // Async label — fetches name, caches result
+  // Async label with 60s cache TTL (v2)
   {
     path: '/products/:id',
-    label: async ({ params }) => {
-      const product = await fetchProduct(params.id)
-      return product.name
-    },
+    label: async ({ params }) => fetchProductName(params.id),
+    cacheTtl: 60_000,
+    onMatch: ({ params }) => analytics.track('product_view', params),
   },
+
+  // Wildcard route (v2)
+  { path: '/docs/*', label: 'Docs' },
+
+  // Optional param (v2)
+  { path: '/shop/:category?', label: ({ params }) => params.category ?? 'All' },
+
+  // Hidden from breadcrumb
+  { path: '/app', label: 'App', hidden: true },
 
   // With icon
   { path: '/settings', label: 'Settings', icon: <GearIcon /> },
-
-  // Hidden from breadcrumb (layout-only route)
-  { path: '/app', label: 'App', hidden: true },
 ]
 ```
 
 ---
 
-## Features
+## v2 Features
 
-### ⚡ Async labels with cache
+### Wildcard routes
+
+```ts
+{ path: '/docs/*', label: 'Docs' }
+// Matches /docs/intro, /docs/api/reference, etc.
+// params['*'] contains the wildcard portion
+```
+
+### Cache TTL per route
 
 ```ts
 {
   path: '/users/:id',
-  label: async ({ params }) => {
-    const user = await fetchUser(params.id)
-    return user.displayName
-  }
+  label: async ({ params }) => fetchUser(params.id).then(u => u.name),
+  cacheTtl: 30_000, // re-fetch after 30 seconds
 }
 ```
 
-Labels can be async. Results are cached by `(path, params)` — back navigation is instant. Pass `renderSkeleton` to show a placeholder while loading.
-
-### 🔍 Schema.org JSON-LD (SEO)
-
-```tsx
-<AutoBreadcrumb injectJsonLd baseUrl="https://myapp.com" />
-```
-
-Automatically injects a `BreadcrumbList` structured data block for Google rich results. No extra libraries needed.
-
-### 📄 Document title sync
-
-```tsx
-<AutoBreadcrumb syncDocumentTitle appName="MyApp" />
-// Sets: document.title = "iPhone 15 — Products — MyApp"
-```
-
-### 🙈 Hidden segments
+### Invalidate cache after mutations
 
 ```ts
-{ path: '/app', label: 'App', hidden: true }
-// Skipped in breadcrumb, present in routing
+import { invalidateLabelCache } from 'breadcrumb-core'
+
+await renameProduct(id, newName)
+invalidateLabelCache('/products/:id', { id })
+// Next navigation will re-fetch the label
 ```
 
-### 🗜️ Smart collapsing
+### Analytics with `onNavigate`
 
 ```tsx
-<AutoBreadcrumb maxItems={4} />
-// Home / Products / … / Reviews
+<BreadcrumbProvider
+  routes={routes}
+  onNavigate={(items, pathname) => {
+    analytics.page(pathname, { trail: items.map(i => i.label).join(' > ') })
+  }}
+>
 ```
 
-### 🎨 Headless mode
+### Navigation history
 
 ```tsx
-import { useBreadcrumb } from 'breadcrumb-core/headless'
+import { useBreadcrumbHistory } from 'breadcrumb-core/react-router'
 
-function MyBreadcrumb() {
-  const items = useBreadcrumb()
-  // [{ path, label, params, isLast, icon }, ...]
-  return (
-    <ol>
-      {items.map(item => (
-        <li key={item.path}>
-          {item.isLast
-            ? <span>{item.label}</span>
-            : <a href={item.path}>{item.label}</a>}
-        </li>
-      ))}
-    </ol>
-  )
+function BackLink() {
+  const history = useBreadcrumbHistory()
+  const prev = history[history.length - 2]
+  if (!prev) return null
+  const item = prev[prev.length - 1]
+  return <a href={item.path}>← Back to {item.label}</a>
 }
 ```
 
-### 💅 Pre-styled component
+### Accessible multi-nav pages
 
 ```tsx
-import { StyledBreadcrumb, BreadcrumbSkeleton } from 'breadcrumb-core/ui'
+<AutoBreadcrumb ariaLabel="Product navigation" />
+<AutoBreadcrumb ariaLabel="Site navigation" />
+```
 
-<StyledBreadcrumb
-  theme="dark"
-  renderSkeleton={() => <BreadcrumbSkeleton count={3} />}
+### Click interception
+
+```tsx
+<AutoBreadcrumb
+  onItemClick={(item) => {
+    if (item.path === '/checkout') {
+      showConfirmDialog()
+      return false // prevent navigation
+    }
+  }}
 />
+```
+
+### Pill theme
+
+```tsx
+import { StyledBreadcrumb } from 'breadcrumb-core/ui'
+<StyledBreadcrumb theme="pill" />
 ```
 
 ---
@@ -252,90 +187,81 @@ import { StyledBreadcrumb, BreadcrumbSkeleton } from 'breadcrumb-core/ui'
 
 ### `<BreadcrumbProvider>`
 
-| Prop | Type | Required | Description |
-|------|------|----------|-------------|
-| `routes` | `RouteConfig[]` | ✅ | Route definitions |
-| `children` | `ReactNode` | ✅ | App content |
-| `pathname` | `string` | (core only) | Current pathname. Injected automatically by adapters |
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `routes` | `RouteConfig[]` | required | Route definitions |
+| `children` | `ReactNode` | required | App content |
+| `onNavigate` | `(items, pathname) => void` | — | **v2** Called after each navigation |
+| `maxHistory` | `number` | `20` | **v2** Max snapshots for `useBreadcrumbHistory()` |
 
 ### `<AutoBreadcrumb>`
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `separator` | `ReactNode` | `"/"` | Separator between items |
+| `separator` | `ReactNode` | `"/"` | Between items |
 | `maxItems` | `number` | — | Collapse middle with `…` |
-| `showHome` | `boolean` | `true` | Include root `/` item |
-| `homeIcon` | `ReactNode` | — | Icon for home item |
+| `showHome` | `boolean` | `true` | Include root item |
 | `className` | `string` | — | CSS class on `<nav>` |
 | `syncDocumentTitle` | `boolean` | `false` | Auto-update `document.title` |
 | `appName` | `string` | — | Appended to synced title |
 | `injectJsonLd` | `boolean` | `false` | Inject Schema.org JSON-LD |
 | `baseUrl` | `string` | `""` | Base URL for JSON-LD |
 | `renderItem` | `(item, isLast) => ReactNode` | — | Custom item renderer |
-| `renderSkeleton` | `() => ReactNode` | — | Shown while async labels load |
+| `renderSkeleton` | `() => ReactNode` | — | Loading placeholder |
+| `ariaLabel` | `string` | `"breadcrumb"` | **v2** `aria-label` on `<nav>` |
+| `onItemClick` | `(item) => boolean \| void` | — | **v2** Intercept clicks |
 
 ### `RouteConfig`
 
-```ts
-interface RouteConfig {
-  path: string                                              // Express-style path
-  label: string | (({ params: RouteParams }) =>            // Label or async fn
-    string | Promise<string>)
-  icon?: ReactNode                                         // Icon before label
-  hidden?: boolean                                         // Skip in breadcrumb
-}
-```
-
-### `BreadcrumbItem`
-
-```ts
-interface BreadcrumbItem {
-  path: string
-  label: string
-  params: Record<string, string>
-  isLast: boolean
-  icon?: ReactNode
-}
-```
+| Field | Type | Description |
+|-------|------|-------------|
+| `path` | `string` | Express-style path. Supports `:param`, `:param?`, `*` |
+| `label` | `string \| fn` | Static or async label. **v2:** fn receives `{ params, pathname }` |
+| `icon` | `ReactNode` | Icon before label |
+| `hidden` | `boolean` | Skip in breadcrumb |
+| `cacheTtl` | `number` | **v2** Cache TTL in ms |
+| `onMatch` | `fn` | **v2** Called when segment is matched |
 
 ### Hooks
 
 | Hook | Returns | Description |
 |------|---------|-------------|
-| `useBreadcrumb()` | `BreadcrumbItem[]` | Current resolved items |
-| `useBreadcrumbLoading()` | `boolean` | True while async labels resolve |
+| `useBreadcrumb()` | `BreadcrumbItem[]` | Current items |
+| `useBreadcrumbLoading()` | `boolean` | True while resolving |
+| `useBreadcrumbHistory()` | `BreadcrumbItem[][]` | **v2** Navigation snapshots |
 
-### Core utilities (framework-agnostic)
+### Core utilities
 
 ```ts
-import { matchRoute, buildBreadcrumbs, generateJsonLd, clearLabelCache } from 'breadcrumb-core'
+import {
+  matchRoute,
+  buildBreadcrumbs,
+  generateJsonLd,
+  clearLabelCache,
+  invalidateLabelCache, // v2
+} from 'auto-breadcrumb'
 ```
 
 ---
 
-## Comparison
+## Migration from v1
 
-| Tool | Async labels | SEO JSON-LD | Multi-router | Headless | Cache |
-|------|:---:|:---:|:---:|:---:|:---:|
-| **breadcrumb-core** ✦ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| use-react-router-breadcrumbs | ❌ | ❌ | ❌ | ✅ | ❌ |
-| antd Breadcrumb | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Manual per-page | ❌ | ❌ | ✅ | ❌ | ❌ |
+1. **`label` function signature** — `pathname` is now available but optional. No changes needed unless you want it.
+2. **All adapters now forward extra props** — `onNavigate` and `maxHistory` work on all router adapters.
+3. See [CHANGELOG.md](./CHANGELOG.md) for the full list of additions.
 
 ---
 
 ## Contributing
 
-Contributions are welcome! Please open an issue or PR on [GitHub](https://github.com/virendra2902/breadcrumb-core).
-
 ```bash
 git clone https://github.com/virendra2902/breadcrumb-core.git
 cd breadcrumb-core
 npm install
-npm run dev    # watch mode build
-npm run lint   # type check
-npm run build  # production build
+npm run dev
 ```
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
 
 ---
 

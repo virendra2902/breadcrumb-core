@@ -1,6 +1,7 @@
+'use client'
+
 // ─────────────────────────────────────────────
-// auto-breadcrumb · headless
-// Framework-agnostic React context + hook + component
+// breadcrumb-core · headless  v2.0.0
 // ─────────────────────────────────────────────
 
 import {
@@ -24,6 +25,8 @@ import {
 interface BreadcrumbContextValue {
   items: BreadcrumbItem[]
   isLoading: boolean
+  /** v2: Full navigation history of breadcrumb item arrays */
+  history: BreadcrumbItem[][]
 }
 
 const BreadcrumbContext = createContext<BreadcrumbContextValue | null>(null)
@@ -32,28 +35,30 @@ const BreadcrumbContext = createContext<BreadcrumbContextValue | null>(null)
 
 export interface BreadcrumbProviderProps {
   routes: RouteConfig[]
-  /** Current pathname — each router adapter injects this automatically */
   pathname: string
   children: ReactNode
+  /**
+   * v2: Called after breadcrumbs resolve on every navigation.
+   * Useful for analytics, logging, or syncing external state.
+   */
+  onNavigate?: (items: BreadcrumbItem[], pathname: string) => void
+  /**
+   * v2: Max number of navigation states to keep in history.
+   * Defaults to 20.
+   */
+  maxHistory?: number
 }
 
-/**
- * Core provider. Router adapters (react-router, next, tanstack-router)
- * wrap this and pass the live pathname automatically.
- *
- * For custom integrations, use this directly:
- * @example
- * <BreadcrumbProvider routes={routes} pathname={location.pathname}>
- *   <App />
- * </BreadcrumbProvider>
- */
 export function BreadcrumbProvider({
   routes,
   pathname,
   children,
+  onNavigate,
+  maxHistory = 20,
 }: BreadcrumbProviderProps) {
   const [items, setItems] = useState<BreadcrumbItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [history, setHistory] = useState<BreadcrumbItem[][]>([])
   const abortRef = useRef<AbortController | null>(null)
 
   const resolve = useCallback(async () => {
@@ -66,15 +71,18 @@ export function BreadcrumbProvider({
       const resolved = await buildBreadcrumbs(pathname, routes)
       if (!controller.signal.aborted) {
         setItems(resolved)
+        setHistory((prev) => {
+          const next = [...prev, resolved]
+          return next.length > maxHistory ? next.slice(next.length - maxHistory) : next
+        })
+        onNavigate?.(resolved, pathname)
       }
     } catch {
-      // Navigation was aborted — ignore
+      // Aborted — ignore
     } finally {
-      if (!controller.signal.aborted) {
-        setIsLoading(false)
-      }
+      if (!controller.signal.aborted) setIsLoading(false)
     }
-  }, [pathname, routes])
+  }, [pathname, routes, onNavigate, maxHistory])
 
   useEffect(() => {
     resolve()
@@ -82,7 +90,7 @@ export function BreadcrumbProvider({
   }, [resolve])
 
   return (
-    <BreadcrumbContext.Provider value={{ items, isLoading }}>
+    <BreadcrumbContext.Provider value={{ items, isLoading, history }}>
       {children}
     </BreadcrumbContext.Provider>
   )
@@ -93,30 +101,30 @@ export function BreadcrumbProvider({
 function useBreadcrumbContext(): BreadcrumbContextValue {
   const ctx = useContext(BreadcrumbContext)
   if (!ctx) {
-    throw new Error(
-      '[auto-breadcrumb] useBreadcrumb must be used inside <BreadcrumbProvider>.'
-    )
+    throw new Error('[auto-breadcrumb] Hook must be used inside <BreadcrumbProvider>.')
   }
   return ctx
 }
 
-/**
- * Returns the current resolved breadcrumb items.
- * Use this for fully custom renders.
- *
- * @example
- * const items = useBreadcrumb()
- * // → [{ path, label, params, isLast, icon }, ...]
- */
+/** Returns the current resolved breadcrumb items */
 export function useBreadcrumb(): BreadcrumbItem[] {
   return useBreadcrumbContext().items
 }
 
-/**
- * Returns true while async labels are being resolved.
- */
+/** Returns true while async labels are resolving */
 export function useBreadcrumbLoading(): boolean {
   return useBreadcrumbContext().isLoading
+}
+
+/**
+ * v2: Returns the navigation history as an array of breadcrumb item arrays.
+ * Each entry is a snapshot of the breadcrumb at the time of navigation.
+ * @example
+ * const history = useBreadcrumbHistory()
+ * const previous = history[history.length - 2]
+ */
+export function useBreadcrumbHistory(): BreadcrumbItem[][] {
+  return useBreadcrumbContext().history
 }
 
 // ─── Component ────────────────────────────────
@@ -144,23 +152,18 @@ export interface AutoBreadcrumbProps {
   renderItem?: (item: BreadcrumbItem, isLast: boolean) => ReactNode
   /** Rendered while async labels are resolving */
   renderSkeleton?: () => ReactNode
+  /**
+   * v2: aria-label for the <nav> element.
+   * Defaults to "breadcrumb". Change when you have multiple navs on a page.
+   */
+  ariaLabel?: string
+  /**
+   * v2: Called when a breadcrumb item is clicked.
+   * Return false to prevent default link navigation.
+   */
+  onItemClick?: (item: BreadcrumbItem) => boolean | void
 }
 
-/**
- * Drop-in breadcrumb component. Place anywhere inside <BreadcrumbProvider>.
- * Zero per-page breadcrumb code — ever.
- *
- * @example
- * <AutoBreadcrumb
- *   separator="/"
- *   injectJsonLd
- *   syncDocumentTitle
- *   appName="MyApp"
- *   renderItem={(item, isLast) =>
- *     isLast ? <span>{item.label}</span> : <a href={item.path}>{item.label}</a>
- *   }
- * />
- */
 export function AutoBreadcrumb({
   separator = '/',
   maxItems,
@@ -172,6 +175,8 @@ export function AutoBreadcrumb({
   baseUrl = '',
   renderItem,
   renderSkeleton,
+  ariaLabel = 'breadcrumb',
+  onItemClick,
 }: AutoBreadcrumbProps) {
   const items = useBreadcrumb()
   const isLoading = useBreadcrumbLoading()
@@ -192,7 +197,6 @@ export function AutoBreadcrumb({
     visible = visible.slice(1)
   }
 
-  // Collapse middle items when over maxItems
   if (maxItems && visible.length > maxItems) {
     const head = visible.slice(0, 1)
     const tail = visible.slice(visible.length - (maxItems - 2))
@@ -205,11 +209,21 @@ export function AutoBreadcrumb({
     visible = [...head, ellipsis, ...tail]
   }
 
+  const handleClick = (item: BreadcrumbItem) => (e: React.MouseEvent) => {
+    if (!onItemClick) return
+    const result = onItemClick(item)
+    if (result === false) e.preventDefault()
+  }
+
   const defaultRenderItem = (item: BreadcrumbItem, isLast: boolean) =>
     isLast ? (
       <span aria-current="page">{item.label}</span>
     ) : (
-      <a href={item.path} style={{ textDecoration: 'none', color: 'inherit' }}>
+      <a
+        href={item.path}
+        style={{ textDecoration: 'none', color: 'inherit' }}
+        onClick={handleClick(item)}
+      >
         {item.label}
       </a>
     )
@@ -217,7 +231,7 @@ export function AutoBreadcrumb({
   const render = renderItem ?? defaultRenderItem
 
   return (
-    <nav aria-label="breadcrumb" className={className}>
+    <nav aria-label={ariaLabel} className={className}>
       {injectJsonLd && items.length > 0 && (
         <script
           type="application/ld+json"

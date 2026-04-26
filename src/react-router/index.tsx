@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────
-// auto-breadcrumb · react-router
+// breadcrumb-core · react-router  v2.0.0
 // React Router v6+ adapter
 // ─────────────────────────────────────────────
 
@@ -10,35 +10,30 @@ import {
   AutoBreadcrumb as CoreBreadcrumb,
   useBreadcrumb,
   useBreadcrumbLoading,
+  useBreadcrumbHistory,
   type AutoBreadcrumbProps,
   type BreadcrumbProviderProps as CoreProviderProps,
 } from '../headless'
 import type { RouteConfig, BreadcrumbItem } from '../core'
 
 export interface BreadcrumbProviderProps
-  extends Omit<CoreProviderProps, 'pathname'> {}
+  extends Omit<CoreProviderProps, 'pathname'> { }
 
 /**
- * Wrap your app once — automatically reads pathname from React Router.
+ * Wrap your app once — reads pathname from React Router automatically.
+ * Supports all v2 props: onNavigate, maxHistory.
  *
  * @example
- * // main.tsx
- * import { BrowserRouter } from 'react-router-dom'
- * import { BreadcrumbProvider } from 'auto-breadcrumb/react-router'
- *
  * <BrowserRouter>
- *   <BreadcrumbProvider routes={routes}>
+ *   <BreadcrumbProvider routes={routes} onNavigate={(items) => analytics.track(items)}>
  *     <App />
  *   </BreadcrumbProvider>
  * </BrowserRouter>
  */
-export function BreadcrumbProvider({
-  routes,
-  children,
-}: BreadcrumbProviderProps) {
+export function BreadcrumbProvider({ routes, children, ...rest }: BreadcrumbProviderProps) {
   const { pathname } = useLocation()
   return (
-    <CoreProvider routes={routes} pathname={pathname}>
+    <CoreProvider routes={routes} pathname={pathname} {...rest}>
       {children}
     </CoreProvider>
   )
@@ -46,10 +41,7 @@ export function BreadcrumbProvider({
 
 /**
  * Drop-in breadcrumb using React Router's <Link>.
- * Place it anywhere inside <BreadcrumbProvider>.
- *
- * @example
- * <AutoBreadcrumb separator="›" injectJsonLd syncDocumentTitle appName="Acme" />
+ * Supports all v2 props: ariaLabel, onItemClick.
  */
 export function AutoBreadcrumb(props: AutoBreadcrumbProps) {
   const defaultRenderer = (item: BreadcrumbItem, isLast: boolean): ReactNode =>
@@ -62,5 +54,5 @@ export function AutoBreadcrumb(props: AutoBreadcrumbProps) {
   return <CoreBreadcrumb {...props} renderItem={props.renderItem ?? defaultRenderer} />
 }
 
-export { useBreadcrumb, useBreadcrumbLoading }
+export { useBreadcrumb, useBreadcrumbLoading, useBreadcrumbHistory }
 export type { RouteConfig, BreadcrumbItem, AutoBreadcrumbProps }

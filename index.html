@@ -1,433 +1,1180 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>breadcrumb-core — Zero-config breadcrumbs for React</title>
-<meta name="description" content="Zero-config breadcrumbs from your route config. Async labels, SEO JSON-LD, and adapters for React Router, Next.js, and TanStack Router." />
-<meta property="og:title" content="breadcrumb-core" />
-<meta property="og:description" content="Zero-config breadcrumbs from your route config. Async labels, SEO, multi-router." />
-<meta property="og:url" content="https://virendra2902.github.io/breadcrumb-core" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;700;800&family=JetBrains+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
-<style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>breadcrumb-core — Zero-config breadcrumbs for React</title>
+  <meta name="description"
+    content="Zero-config breadcrumbs from your route config. Async labels, SEO JSON-LD, and adapters for React Router, Next.js, and TanStack Router." />
+  <meta property="og:title" content="breadcrumb-core" />
+  <meta property="og:description"
+    content="Zero-config breadcrumbs from your route config. Async labels, SEO, multi-router." />
+  <meta property="og:url" content="https://virendra2902.github.io/breadcrumb-core" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;700;800&family=JetBrains+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap"
+    rel="stylesheet" />
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-:root {
-  --ink:      #0c0c0c;
-  --ink2:     #3d3d3d;
-  --ink3:     #747474;
-  --bg:       #f4f2ed;
-  --surface:  #ffffff;
-  --surface2: #eeebe5;
-  --border:   #dedad2;
-  --green:    #00a572;
-  --green-lt: #e3f7f0;
-  --green-dk: #007a55;
-  --blue:     #2563eb;
-  --blue-lt:  #eff6ff;
-  --amber:    #d97706;
-  --amber-lt: #fffbeb;
-  --red:      #dc2626;
-  --red-lt:   #fef2f2;
-  --mono: 'JetBrains Mono', monospace;
-  --sans: 'DM Sans', sans-serif;
-  --disp: 'Syne', sans-serif;
-  --r:  10px;
-  --rl: 16px;
-  --rx: 24px;
-}
+    :root {
+      --ink: #0c0c0c;
+      --ink2: #3d3d3d;
+      --ink3: #747474;
+      --bg: #f4f2ed;
+      --surface: #ffffff;
+      --surface2: #eeebe5;
+      --border: #dedad2;
+      --green: #00a572;
+      --green-lt: #e3f7f0;
+      --green-dk: #007a55;
+      --blue: #2563eb;
+      --blue-lt: #eff6ff;
+      --amber: #d97706;
+      --amber-lt: #fffbeb;
+      --red: #dc2626;
+      --red-lt: #fef2f2;
+      --mono: 'JetBrains Mono', monospace;
+      --sans: 'DM Sans', sans-serif;
+      --disp: 'Syne', sans-serif;
+      --r: 10px;
+      --rl: 16px;
+      --rx: 24px;
+    }
 
-html { scroll-behavior: smooth; }
-body {
-  font-family: var(--sans);
-  background: var(--bg);
-  color: var(--ink);
-  line-height: 1.6;
-  overflow-x: hidden;
-}
+    html {
+      scroll-behavior: smooth;
+    }
 
-/* ── NAV ── */
-nav {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 2.5rem; height: 58px;
-  background: rgba(244,242,237,0.88);
-  backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--border);
-}
-.nav-logo {
-  font-family: var(--disp); font-weight: 800; font-size: 1rem;
-  letter-spacing: -0.02em; color: var(--ink); text-decoration: none;
-}
-.nav-logo em { font-style: normal; color: var(--green); }
-.nav-links { display: flex; align-items: center; gap: 1.75rem; }
-.nav-links a {
-  font-size: 0.83rem; font-weight: 500; color: var(--ink2);
-  text-decoration: none; transition: color 0.15s;
-}
-.nav-links a:hover { color: var(--ink); }
-.nav-npm {
-  background: var(--ink) !important; color: #fff !important;
-  padding: 0.38rem 1rem; border-radius: 999px; font-size: 0.78rem !important;
-}
-.nav-npm:hover { background: #2a2a2a !important; }
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
 
-/* ── HERO ── */
-.hero {
-  min-height: 100vh; display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  text-align: center; padding: 7rem 2rem 5rem; position: relative;
-}
-.hero-grid {
-  position: absolute; inset: 0; pointer-events: none;
-  background-image: linear-gradient(var(--border) 1px, transparent 1px),
-    linear-gradient(90deg, var(--border) 1px, transparent 1px);
-  background-size: 56px 56px; opacity: 0.45;
-}
-.hero-grid::after {
-  content: ''; position: absolute; inset: 0;
-  background: radial-gradient(ellipse 75% 65% at 50% 50%, transparent 30%, var(--bg) 100%);
-}
-.pill {
-  display: inline-flex; align-items: center; gap: 0.45rem;
-  background: var(--green-lt); color: var(--green-dk);
-  border: 1px solid #9ee6cc; border-radius: 999px;
-  padding: 0.28rem 0.85rem; font-size: 0.77rem; font-weight: 500;
-  font-family: var(--mono); margin-bottom: 1.6rem; position: relative; z-index: 1;
-}
-.pill-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
-h1 {
-  font-family: var(--disp); font-size: clamp(2.8rem, 8vw, 6.2rem);
-  font-weight: 800; line-height: 1.0; letter-spacing: -0.04em;
-  color: var(--ink); position: relative; z-index: 1; margin-bottom: 1.5rem;
-}
-h1 em { font-style: normal; color: var(--green); }
-.hero-sub {
-  font-size: clamp(1rem, 1.8vw, 1.15rem); color: var(--ink2);
-  max-width: 520px; font-weight: 300; line-height: 1.65;
-  position: relative; z-index: 1; margin-bottom: 2.5rem;
-}
-.hero-actions {
-  display: flex; align-items: center; gap: 1rem;
-  position: relative; z-index: 1; flex-wrap: wrap; justify-content: center;
-  margin-bottom: 3.5rem;
-}
-.btn-p {
-  background: var(--ink); color: #fff; border: none;
-  border-radius: var(--r); padding: 0.78rem 1.7rem;
-  font-family: var(--sans); font-size: 0.92rem; font-weight: 500;
-  cursor: pointer; text-decoration: none; transition: transform 0.15s, background 0.15s;
-  display: inline-flex; align-items: center; gap: 0.4rem;
-}
-.btn-p:hover { background: #222; transform: translateY(-1px); }
-.btn-s {
-  background: var(--surface); color: var(--ink);
-  border: 1px solid var(--border); border-radius: var(--r);
-  padding: 0.78rem 1.7rem; font-family: var(--sans); font-size: 0.92rem;
-  font-weight: 500; cursor: pointer; text-decoration: none;
-  transition: transform 0.15s, background 0.15s;
-  display: inline-flex; align-items: center; gap: 0.4rem;
-}
-.btn-s:hover { background: var(--surface2); transform: translateY(-1px); }
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2.5rem;
+      height: 58px;
+      background: rgba(244, 242, 237, 0.88);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+    }
 
-/* ── DEMO WIDGET ── */
-.demo-wrap { position: relative; z-index: 1; width: 100%; max-width: 680px; }
-.demo-card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--rl); overflow: hidden;
-  box-shadow: 0 2px 20px rgba(0,0,0,0.06);
-}
-.demo-bar {
-  display: flex; align-items: center; gap: 0.6rem;
-  padding: 0.75rem 1.1rem; border-bottom: 1px solid var(--border);
-  background: var(--surface2);
-}
-.db-dots { display: flex; gap: 5px; }
-.db-dot { width: 10px; height: 10px; border-radius: 50%; }
-.db-dot-r { background: #ff5f57; }
-.db-dot-y { background: #febc2e; }
-.db-dot-g { background: #28c840; }
-.db-url {
-  flex: 1; font-family: var(--mono); font-size: 0.73rem; color: var(--ink3);
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 6px; padding: 0.28rem 0.65rem;
-}
-.db-url span { color: var(--ink2); }
-.demo-body { padding: 1.4rem 1.6rem; }
-.demo-label { font-size: 0.68rem; color: var(--ink3); font-weight: 500; letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 0.65rem; }
-.bc-row {
-  display: flex; align-items: center; gap: 0.45rem;
-  flex-wrap: wrap; min-height: 26px; margin-bottom: 1.2rem;
-}
-.bc-link { color: var(--blue); font-size: 0.88rem; font-weight: 500; cursor: pointer; text-decoration: none; }
-.bc-link:hover { text-decoration: underline; }
-.bc-cur { color: var(--ink); font-size: 0.88rem; font-weight: 600; }
-.bc-sep { color: var(--ink3); font-size: 0.8rem; user-select: none; }
-.bc-skel {
-  display: inline-block; height: 14px; border-radius: 4px;
-  background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.3s ease-in-out infinite;
-}
-@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
-.demo-paths { display: flex; gap: 0.45rem; flex-wrap: wrap; }
-.path-btn {
-  font-family: var(--mono); font-size: 0.72rem; color: var(--ink2);
-  background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 7px; padding: 0.28rem 0.65rem;
-  cursor: pointer; transition: all 0.14s;
-}
-.path-btn:hover { background: var(--border); }
-.path-btn.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+    .nav-logo {
+      font-family: var(--disp);
+      font-weight: 800;
+      font-size: 1rem;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+      text-decoration: none;
+    }
 
-/* ── INSTALL ── */
-.install-strip {
-  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
-  background: #111218; border-radius: var(--r);
-  padding: 0.9rem 1.4rem; margin: 3rem auto 0;
-  max-width: 420px; width: 90%; position: relative; z-index: 1;
-}
-.install-cmd { font-family: var(--mono); font-size: 0.87rem; color: #9af4ce; }
-.copy-btn {
-  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 6px; color: rgba(255,255,255,0.75); font-size: 0.72rem;
-  padding: 0.28rem 0.65rem; cursor: pointer; transition: background 0.15s; white-space: nowrap;
-}
-.copy-btn:hover { background: rgba(255,255,255,0.16); }
+    .nav-logo em {
+      font-style: normal;
+      color: var(--green);
+    }
 
-/* ── SECTION BASE ── */
-.wrap { max-width: 1080px; margin: 0 auto; padding: 6rem 2rem; }
-.s-tag { font-family: var(--mono); font-size: 0.72rem; font-weight: 500; color: var(--green); letter-spacing: 0.09em; text-transform: uppercase; margin-bottom: 0.7rem; }
-.s-title {
-  font-family: var(--disp); font-size: clamp(1.9rem, 4vw, 3rem);
-  font-weight: 800; letter-spacing: -0.03em; line-height: 1.06;
-  color: var(--ink); margin-bottom: 1.1rem;
-}
-.s-sub { font-size: 1rem; color: var(--ink2); max-width: 480px; font-weight: 300; line-height: 1.7; margin-bottom: 3rem; }
-.divider { height: 1px; background: var(--border); }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 1.75rem;
+    }
 
-/* ── CODE BLOCKS ── */
-.split { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start; }
-@media(max-width:680px){ .split{ grid-template-columns: 1fr; } }
-.cblock { background: #0e1016; border-radius: var(--rl); overflow: hidden; border: 1px solid #1e2130; }
-.chead { display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 1.1rem; border-bottom: 1px solid #1e2130; }
-.cfile { font-family: var(--mono); font-size: 0.7rem; color: #666; }
-.ctag { font-size: 0.67rem; padding: 0.15rem 0.55rem; border-radius: 4px; font-family: var(--mono); font-weight: 500; }
-.ctag-bad { background: #2d1515; color: #f87171; }
-.ctag-good { background: #0e2d1a; color: #4ade80; }
-.cblock pre { padding: 1.1rem 1.2rem; font-family: var(--mono); font-size: 0.77rem; line-height: 1.85; color: #cdd6f4; overflow-x: auto; }
-.kw  { color: #cba6f7; }
-.str { color: #a6e3a1; }
-.fn  { color: #89b4fa; }
-.cm  { color: #555d70; font-style: italic; }
-.tg  { color: #f38ba8; }
-.at  { color: #fab387; }
-.jsx { color: #89dceb; }
+    .nav-links a {
+      font-size: 0.83rem;
+      font-weight: 500;
+      color: var(--ink2);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
 
-/* ── FEATURES ── */
-.feat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px,1fr)); gap: 1.25rem; }
-.feat-card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--rl); padding: 1.4rem;
-  transition: transform 0.14s, box-shadow 0.14s;
-}
-.feat-card:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(0,0,0,0.07); }
-.ficon { width: 38px; height: 38px; border-radius: var(--r); display: flex; align-items: center; justify-content: center; font-size: 1rem; margin-bottom: 0.9rem; }
-.fi-g { background: var(--green-lt); }
-.fi-b { background: var(--blue-lt); }
-.fi-a { background: var(--amber-lt); }
-.fi-r { background: var(--red-lt); }
-.feat-card h3 { font-family: var(--disp); font-size: 0.95rem; font-weight: 700; margin-bottom: 0.45rem; color: var(--ink); }
-.feat-card p { font-size: 0.84rem; color: var(--ink2); line-height: 1.6; }
-.feat-card code { font-family: var(--mono); font-size: 0.78em; background: var(--surface2); padding: 0.1em 0.35em; border-radius: 4px; }
+    .nav-links a:hover {
+      color: var(--ink);
+    }
 
-/* ── HOW IT WORKS ── */
-.steps { display: grid; grid-template-columns: repeat(4,1fr); gap: 0; position: relative; }
-.steps::before { content: ''; position: absolute; top: 27px; left: 12.5%; right: 12.5%; height: 1px; background: var(--border); }
-@media(max-width:680px){ .steps{ grid-template-columns: 1fr 1fr; } .steps::before{ display:none; } }
-.step { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 0 1.25rem; gap: 0.85rem; position: relative; z-index: 1; }
-.step-n {
-  width: 54px; height: 54px; border-radius: 50%;
-  background: var(--surface); border: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: center;
-  font-family: var(--disp); font-size: 1.15rem; font-weight: 800; color: var(--ink);
-}
-.step h4 { font-family: var(--disp); font-size: 0.92rem; font-weight: 700; color: var(--ink); }
-.step p { font-size: 0.81rem; color: var(--ink2); line-height: 1.55; }
+    .nav-npm {
+      background: var(--ink) !important;
+      color: #fff !important;
+      padding: 0.38rem 1rem;
+      border-radius: 999px;
+      font-size: 0.78rem !important;
+    }
 
-/* ── ADAPTERS ── */
-.adp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px,1fr)); gap: 1rem; }
-.adp-card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--rl); padding: 1.4rem; transition: transform 0.14s;
-}
-.adp-card:hover { transform: translateY(-2px); }
-.adp-name { font-family: var(--disp); font-size: 0.88rem; font-weight: 700; color: var(--ink); margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.5rem; }
-.adp-badge { font-size: 0.67rem; padding: 0.15rem 0.5rem; border-radius: 4px; background: var(--green-lt); color: var(--green-dk); font-weight: 600; font-family: var(--mono); }
-.adp-code { font-family: var(--mono); font-size: 0.71rem; color: var(--ink3); line-height: 1.75; }
-.adp-code b { color: var(--green-dk); font-weight: 500; }
+    .nav-npm:hover {
+      background: #2a2a2a !important;
+    }
 
-/* ── COMPARE ── */
-.tbl-wrap { border: 1px solid var(--border); border-radius: var(--rl); overflow: hidden; }
-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-th { text-align: left; padding: 0.7rem 1rem; font-family: var(--disp); font-size: 0.77rem; font-weight: 700; color: var(--ink); border-bottom: 2px solid var(--border); background: var(--surface); }
-td { padding: 0.7rem 1rem; border-bottom: 1px solid var(--border); background: var(--surface); vertical-align: middle; }
-tr:last-child td { border-bottom: none; }
-tr:hover td { background: var(--surface2); }
-.hl td { background: #f0fdf8 !important; }
-.hl td:first-child { font-weight: 600; }
-.yes { color: var(--green); }
-.no  { color: #bbb; }
+    /* ── HERO ── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 7rem 2rem 5rem;
+      position: relative;
+    }
 
-/* ── API ── */
-.api-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
-@media(max-width:680px){ .api-grid{ grid-template-columns: 1fr; } }
-.api-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--rl); overflow: hidden; }
-.api-head { padding: 0.85rem 1.2rem; border-bottom: 1px solid var(--border); }
-.api-head h4 { font-family: var(--disp); font-weight: 700; font-size: 0.88rem; color: var(--ink); }
-.api-tbl { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-.api-tbl th { text-align: left; padding: 0.45rem 0.9rem; font-weight: 600; font-size: 0.7rem; color: var(--ink3); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); }
-.api-tbl td { padding: 0.45rem 0.9rem; border-bottom: 1px solid var(--border); vertical-align: top; }
-.api-tbl tr:last-child td { border-bottom: none; }
-.api-tbl td:first-child { font-family: var(--mono); font-size: 0.74rem; color: var(--blue); }
-.api-tbl td:nth-child(2) { font-family: var(--mono); font-size: 0.74rem; color: var(--ink3); }
-.api-tbl td:last-child { color: var(--ink2); font-size: 0.79rem; }
+    .hero-grid {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background-image: linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 56px 56px;
+      opacity: 0.45;
+    }
 
-/* ── CTA ── */
-.cta {
-  background: var(--ink); color: #fff; text-align: center;
-  padding: 7rem 2rem; position: relative; overflow: hidden;
-}
-.cta-bg {
-  position: absolute; inset: 0;
-  background-image: linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
-  background-size: 56px 56px;
-}
-.cta h2 {
-  font-family: var(--disp); font-size: clamp(2rem, 5vw, 3.8rem);
-  font-weight: 800; letter-spacing: -0.03em;
-  position: relative; z-index: 1; margin-bottom: 1rem;
-}
-.cta h2 em { font-style: normal; color: var(--green); }
-.cta p { font-size: 1rem; color: rgba(255,255,255,0.5); position: relative; z-index: 1; margin-bottom: 2.5rem; font-weight: 300; }
-.cta-btns { display: flex; gap: 1rem; justify-content: center; position: relative; z-index: 1; flex-wrap: wrap; }
-.btn-cta { background: var(--green); color: #fff; border: none; border-radius: var(--r); padding: 0.85rem 2rem; font-size: 0.92rem; font-weight: 500; cursor: pointer; transition: transform 0.15s, background 0.15s; font-family: var(--sans); text-decoration: none; }
-.btn-cta:hover { background: var(--green-dk); transform: translateY(-1px); }
-.btn-ghost { background: transparent; color: rgba(255,255,255,0.75); border: 1px solid rgba(255,255,255,0.18); border-radius: var(--r); padding: 0.85rem 2rem; font-size: 0.92rem; font-weight: 500; cursor: pointer; transition: all 0.15s; font-family: var(--sans); text-decoration: none; }
-.btn-ghost:hover { border-color: rgba(255,255,255,0.5); color: #fff; }
+    .hero-grid::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 75% 65% at 50% 50%, transparent 30%, var(--bg) 100%);
+    }
 
-/* ── FOOTER ── */
-footer {
-  background: #080a0e; padding: 2.5rem 2.5rem;
-  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
-}
-.f-logo { font-family: var(--disp); font-weight: 800; color: rgba(255,255,255,0.9); font-size: 0.95rem; }
-.f-logo em { font-style: normal; color: var(--green); }
-.f-links { display: flex; gap: 1.5rem; }
-.f-links a { font-size: 0.8rem; color: rgba(255,255,255,0.35); text-decoration: none; transition: color 0.15s; }
-.f-links a:hover { color: rgba(255,255,255,0.75); }
-.f-copy { font-size: 0.77rem; color: rgba(255,255,255,0.2); }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      background: var(--green-lt);
+      color: var(--green-dk);
+      border: 1px solid #9ee6cc;
+      border-radius: 999px;
+      padding: 0.28rem 0.85rem;
+      font-size: 0.77rem;
+      font-weight: 500;
+      font-family: var(--mono);
+      margin-bottom: 1.6rem;
+      position: relative;
+      z-index: 1;
+    }
 
-/* ── ANIMATIONS ── */
-@keyframes fadeUp { from{ opacity:0; transform:translateY(18px); } to{ opacity:1; transform:translateY(0); } }
-.hero > * { animation: fadeUp 0.55s ease both; }
-.hero > *:nth-child(1){ animation-delay:0s; }
-.hero > *:nth-child(2){ animation-delay:0.08s; }
-.hero > *:nth-child(3){ animation-delay:0.16s; }
-.hero > *:nth-child(4){ animation-delay:0.24s; }
-.hero > *:nth-child(5){ animation-delay:0.32s; }
-.hero > *:nth-child(6){ animation-delay:0.4s; }
-.hero > *:nth-child(7){ animation-delay:0.48s; }
-</style>
+    .pill-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      flex-shrink: 0;
+    }
+
+    h1 {
+      font-family: var(--disp);
+      font-size: clamp(2.8rem, 8vw, 6.2rem);
+      font-weight: 800;
+      line-height: 1.0;
+      letter-spacing: -0.04em;
+      color: var(--ink);
+      position: relative;
+      z-index: 1;
+      margin-bottom: 1.5rem;
+    }
+
+    h1 em {
+      font-style: normal;
+      color: var(--green);
+    }
+
+    .hero-sub {
+      font-size: clamp(1rem, 1.8vw, 1.15rem);
+      color: var(--ink2);
+      max-width: 520px;
+      font-weight: 300;
+      line-height: 1.65;
+      position: relative;
+      z-index: 1;
+      margin-bottom: 2.5rem;
+    }
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      position: relative;
+      z-index: 1;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 3.5rem;
+    }
+
+    .btn-p {
+      background: var(--ink);
+      color: #fff;
+      border: none;
+      border-radius: var(--r);
+      padding: 0.78rem 1.7rem;
+      font-family: var(--sans);
+      font-size: 0.92rem;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      transition: transform 0.15s, background 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .btn-p:hover {
+      background: #222;
+      transform: translateY(-1px);
+    }
+
+    .btn-s {
+      background: var(--surface);
+      color: var(--ink);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 0.78rem 1.7rem;
+      font-family: var(--sans);
+      font-size: 0.92rem;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      transition: transform 0.15s, background 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .btn-s:hover {
+      background: var(--surface2);
+      transform: translateY(-1px);
+    }
+
+    /* ── DEMO WIDGET ── */
+    .demo-wrap {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 680px;
+    }
+
+    .demo-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--rl);
+      overflow: hidden;
+      box-shadow: 0 2px 20px rgba(0, 0, 0, 0.06);
+    }
+
+    .demo-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.75rem 1.1rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+    }
+
+    .db-dots {
+      display: flex;
+      gap: 5px;
+    }
+
+    .db-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .db-dot-r {
+      background: #ff5f57;
+    }
+
+    .db-dot-y {
+      background: #febc2e;
+    }
+
+    .db-dot-g {
+      background: #28c840;
+    }
+
+    .db-url {
+      flex: 1;
+      font-family: var(--mono);
+      font-size: 0.73rem;
+      color: var(--ink3);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.28rem 0.65rem;
+    }
+
+    .db-url span {
+      color: var(--ink2);
+    }
+
+    .demo-body {
+      padding: 1.4rem 1.6rem;
+    }
+
+    .demo-label {
+      font-size: 0.68rem;
+      color: var(--ink3);
+      font-weight: 500;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      margin-bottom: 0.65rem;
+    }
+
+    .bc-row {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      flex-wrap: wrap;
+      min-height: 26px;
+      margin-bottom: 1.2rem;
+    }
+
+    .bc-link {
+      color: var(--blue);
+      font-size: 0.88rem;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .bc-link:hover {
+      text-decoration: underline;
+    }
+
+    .bc-cur {
+      color: var(--ink);
+      font-size: 0.88rem;
+      font-weight: 600;
+    }
+
+    .bc-sep {
+      color: var(--ink3);
+      font-size: 0.8rem;
+      user-select: none;
+    }
+
+    .bc-skel {
+      display: inline-block;
+      height: 14px;
+      border-radius: 4px;
+      background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.3s ease-in-out infinite;
+    }
+
+    @keyframes shimmer {
+      0% {
+        background-position: 200% 0
+      }
+
+      100% {
+        background-position: -200% 0
+      }
+    }
+
+    .demo-paths {
+      display: flex;
+      gap: 0.45rem;
+      flex-wrap: wrap;
+    }
+
+    .path-btn {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--ink2);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 0.28rem 0.65rem;
+      cursor: pointer;
+      transition: all 0.14s;
+    }
+
+    .path-btn:hover {
+      background: var(--border);
+    }
+
+    .path-btn.on {
+      background: var(--ink);
+      color: #fff;
+      border-color: var(--ink);
+    }
+
+    /* ── INSTALL ── */
+    .install-strip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      background: #111218;
+      border-radius: var(--r);
+      padding: 0.9rem 1.4rem;
+      margin: 3rem auto 0;
+      max-width: 420px;
+      width: 90%;
+      position: relative;
+      z-index: 1;
+    }
+
+    .install-cmd {
+      font-family: var(--mono);
+      font-size: 0.87rem;
+      color: #9af4ce;
+    }
+
+    .copy-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 6px;
+      color: rgba(255, 255, 255, 0.75);
+      font-size: 0.72rem;
+      padding: 0.28rem 0.65rem;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+
+    .copy-btn:hover {
+      background: rgba(255, 255, 255, 0.16);
+    }
+
+    /* ── SECTION BASE ── */
+    .wrap {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 6rem 2rem;
+    }
+
+    .s-tag {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      font-weight: 500;
+      color: var(--green);
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      margin-bottom: 0.7rem;
+    }
+
+    .s-title {
+      font-family: var(--disp);
+      font-size: clamp(1.9rem, 4vw, 3rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.06;
+      color: var(--ink);
+      margin-bottom: 1.1rem;
+    }
+
+    .s-sub {
+      font-size: 1rem;
+      color: var(--ink2);
+      max-width: 480px;
+      font-weight: 300;
+      line-height: 1.7;
+      margin-bottom: 3rem;
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── CODE BLOCKS ── */
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    @media(max-width:680px) {
+      .split {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .cblock {
+      background: #0e1016;
+      border-radius: var(--rl);
+      overflow: hidden;
+      border: 1px solid #1e2130;
+    }
+
+    .chead {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.65rem 1.1rem;
+      border-bottom: 1px solid #1e2130;
+    }
+
+    .cfile {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: #666;
+    }
+
+    .ctag {
+      font-size: 0.67rem;
+      padding: 0.15rem 0.55rem;
+      border-radius: 4px;
+      font-family: var(--mono);
+      font-weight: 500;
+    }
+
+    .ctag-bad {
+      background: #2d1515;
+      color: #f87171;
+    }
+
+    .ctag-good {
+      background: #0e2d1a;
+      color: #4ade80;
+    }
+
+    .cblock pre {
+      padding: 1.1rem 1.2rem;
+      font-family: var(--mono);
+      font-size: 0.77rem;
+      line-height: 1.85;
+      color: #cdd6f4;
+      overflow-x: auto;
+    }
+
+    .kw {
+      color: #cba6f7;
+    }
+
+    .str {
+      color: #a6e3a1;
+    }
+
+    .fn {
+      color: #89b4fa;
+    }
+
+    .cm {
+      color: #555d70;
+      font-style: italic;
+    }
+
+    .tg {
+      color: #f38ba8;
+    }
+
+    .at {
+      color: #fab387;
+    }
+
+    .jsx {
+      color: #89dceb;
+    }
+
+    /* ── FEATURES ── */
+    .feat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .feat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--rl);
+      padding: 1.4rem;
+      transition: transform 0.14s, box-shadow 0.14s;
+    }
+
+    .feat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.07);
+    }
+
+    .ficon {
+      width: 38px;
+      height: 38px;
+      border-radius: var(--r);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      margin-bottom: 0.9rem;
+    }
+
+    .fi-g {
+      background: var(--green-lt);
+    }
+
+    .fi-b {
+      background: var(--blue-lt);
+    }
+
+    .fi-a {
+      background: var(--amber-lt);
+    }
+
+    .fi-r {
+      background: var(--red-lt);
+    }
+
+    .feat-card h3 {
+      font-family: var(--disp);
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 0.45rem;
+      color: var(--ink);
+    }
+
+    .feat-card p {
+      font-size: 0.84rem;
+      color: var(--ink2);
+      line-height: 1.6;
+    }
+
+    .feat-card code {
+      font-family: var(--mono);
+      font-size: 0.78em;
+      background: var(--surface2);
+      padding: 0.1em 0.35em;
+      border-radius: 4px;
+    }
+
+    /* ── HOW IT WORKS ── */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+      position: relative;
+    }
+
+    .steps::before {
+      content: '';
+      position: absolute;
+      top: 27px;
+      left: 12.5%;
+      right: 12.5%;
+      height: 1px;
+      background: var(--border);
+    }
+
+    @media(max-width:680px) {
+      .steps {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .steps::before {
+        display: none;
+      }
+    }
+
+    .step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 0 1.25rem;
+      gap: 0.85rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .step-n {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--disp);
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--ink);
+    }
+
+    .step h4 {
+      font-family: var(--disp);
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .step p {
+      font-size: 0.81rem;
+      color: var(--ink2);
+      line-height: 1.55;
+    }
+
+    /* ── ADAPTERS ── */
+    .adp-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 1rem;
+    }
+
+    .adp-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--rl);
+      padding: 1.4rem;
+      transition: transform 0.14s;
+    }
+
+    .adp-card:hover {
+      transform: translateY(-2px);
+    }
+
+    .adp-name {
+      font-family: var(--disp);
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .adp-badge {
+      font-size: 0.67rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      background: var(--green-lt);
+      color: var(--green-dk);
+      font-weight: 600;
+      font-family: var(--mono);
+    }
+
+    .adp-code {
+      font-family: var(--mono);
+      font-size: 0.71rem;
+      color: var(--ink3);
+      line-height: 1.75;
+    }
+
+    .adp-code b {
+      color: var(--green-dk);
+      font-weight: 500;
+    }
+
+    /* ── COMPARE ── */
+    .tbl-wrap {
+      border: 1px solid var(--border);
+      border-radius: var(--rl);
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    th {
+      text-align: left;
+      padding: 0.7rem 1rem;
+      font-family: var(--disp);
+      font-size: 0.77rem;
+      font-weight: 700;
+      color: var(--ink);
+      border-bottom: 2px solid var(--border);
+      background: var(--surface);
+    }
+
+    td {
+      padding: 0.7rem 1rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      vertical-align: middle;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background: var(--surface2);
+    }
+
+    .hl td {
+      background: #f0fdf8 !important;
+    }
+
+    .hl td:first-child {
+      font-weight: 600;
+    }
+
+    .yes {
+      color: var(--green);
+    }
+
+    .no {
+      color: #bbb;
+    }
+
+    /* ── API ── */
+    .api-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    @media(max-width:680px) {
+      .api-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .api-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--rl);
+      overflow: hidden;
+    }
+
+    .api-head {
+      padding: 0.85rem 1.2rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .api-head h4 {
+      font-family: var(--disp);
+      font-weight: 700;
+      font-size: 0.88rem;
+      color: var(--ink);
+    }
+
+    .api-tbl {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+
+    .api-tbl th {
+      text-align: left;
+      padding: 0.45rem 0.9rem;
+      font-weight: 600;
+      font-size: 0.7rem;
+      color: var(--ink3);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .api-tbl td {
+      padding: 0.45rem 0.9rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    .api-tbl tr:last-child td {
+      border-bottom: none;
+    }
+
+    .api-tbl td:first-child {
+      font-family: var(--mono);
+      font-size: 0.74rem;
+      color: var(--blue);
+    }
+
+    .api-tbl td:nth-child(2) {
+      font-family: var(--mono);
+      font-size: 0.74rem;
+      color: var(--ink3);
+    }
+
+    .api-tbl td:last-child {
+      color: var(--ink2);
+      font-size: 0.79rem;
+    }
+
+    /* ── CTA ── */
+    .cta {
+      background: var(--ink);
+      color: #fff;
+      text-align: center;
+      padding: 7rem 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta-bg {
+      position: absolute;
+      inset: 0;
+      background-image: linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+      background-size: 56px 56px;
+    }
+
+    .cta h2 {
+      font-family: var(--disp);
+      font-size: clamp(2rem, 5vw, 3.8rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      position: relative;
+      z-index: 1;
+      margin-bottom: 1rem;
+    }
+
+    .cta h2 em {
+      font-style: normal;
+      color: var(--green);
+    }
+
+    .cta p {
+      font-size: 1rem;
+      color: rgba(255, 255, 255, 0.5);
+      position: relative;
+      z-index: 1;
+      margin-bottom: 2.5rem;
+      font-weight: 300;
+    }
+
+    .cta-btns {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      position: relative;
+      z-index: 1;
+      flex-wrap: wrap;
+    }
+
+    .btn-cta {
+      background: var(--green);
+      color: #fff;
+      border: none;
+      border-radius: var(--r);
+      padding: 0.85rem 2rem;
+      font-size: 0.92rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: transform 0.15s, background 0.15s;
+      font-family: var(--sans);
+      text-decoration: none;
+    }
+
+    .btn-cta:hover {
+      background: var(--green-dk);
+      transform: translateY(-1px);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: rgba(255, 255, 255, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: var(--r);
+      padding: 0.85rem 2rem;
+      font-size: 0.92rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: var(--sans);
+      text-decoration: none;
+    }
+
+    .btn-ghost:hover {
+      border-color: rgba(255, 255, 255, 0.5);
+      color: #fff;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      background: #080a0e;
+      padding: 2.5rem 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .f-logo {
+      font-family: var(--disp);
+      font-weight: 800;
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 0.95rem;
+    }
+
+    .f-logo em {
+      font-style: normal;
+      color: var(--green);
+    }
+
+    .f-links {
+      display: flex;
+      gap: 1.5rem;
+    }
+
+    .f-links a {
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.35);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .f-links a:hover {
+      color: rgba(255, 255, 255, 0.75);
+    }
+
+    .f-copy {
+      font-size: 0.77rem;
+      color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* ── ANIMATIONS ── */
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(18px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .hero>* {
+      animation: fadeUp 0.55s ease both;
+    }
+
+    .hero>*:nth-child(1) {
+      animation-delay: 0s;
+    }
+
+    .hero>*:nth-child(2) {
+      animation-delay: 0.08s;
+    }
+
+    .hero>*:nth-child(3) {
+      animation-delay: 0.16s;
+    }
+
+    .hero>*:nth-child(4) {
+      animation-delay: 0.24s;
+    }
+
+    .hero>*:nth-child(5) {
+      animation-delay: 0.32s;
+    }
+
+    .hero>*:nth-child(6) {
+      animation-delay: 0.4s;
+    }
+
+    .hero>*:nth-child(7) {
+      animation-delay: 0.48s;
+    }
+  </style>
 </head>
+
 <body>
 
-<!-- NAV -->
-<nav>
-  <a class="nav-logo" href="#"><em>breadcrumb</em>-core</a>
-  <div class="nav-links">
-    <a href="#how-it-works">How it works</a>
-    <a href="#features">Features</a>
-    <a href="#adapters">Adapters</a>
-    <a href="#api">API</a>
-    <a href="https://github.com/virendra2902/breadcrumb-core" target="_blank" rel="noopener" class="nav-npm">GitHub →</a>
-  </div>
-</nav>
+  <!-- NAV -->
+  <nav>
+    <a class="nav-logo" href="#"><em>breadcrumb</em>-core</a>
+    <div class="nav-links">
+      <a href="#how-it-works">How it works</a>
+      <a href="#features">Features</a>
+      <a href="#adapters">Adapters</a>
+      <a href="#api">API</a>
+      <a href="https://github.com/virendra2902/breadcrumb-core" target="_blank" rel="noopener" class="nav-npm">GitHub
+        →</a>
+    </div>
+  </nav>
 
-<!-- HERO -->
-<section class="hero">
-  <div class="hero-grid"></div>
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-grid"></div>
 
-  <div class="pill"><span class="pill-dot"></span> v1.0.0 — zero config needed</div>
+    <div class="pill"><span class="pill-dot"></span> v1.0.0 — zero config needed</div>
 
-  <h1>Breadcrumbs that<br/><em>write themselves</em></h1>
+    <h1>Breadcrumbs that<br /><em>write themselves</em></h1>
 
-  <p class="hero-sub">
-    Define your routes once. Get auto-generated breadcrumbs everywhere —
-    with async labels, SEO JSON-LD injection, and adapters for every major React router.
-  </p>
+    <p class="hero-sub">
+      Define your routes once. Get auto-generated breadcrumbs everywhere —
+      with async labels, SEO JSON-LD injection, and adapters for every major React router.
+    </p>
 
-  <div class="hero-actions">
-    <a href="https://github.com/virendra2902/breadcrumb-core#quick-start" target="_blank" rel="noopener" class="btn-p">Get started →</a>
-    <a href="https://github.com/virendra2902/breadcrumb-core" target="_blank" rel="noopener" class="btn-s">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.2 11.38.6.11.82-.26.82-.58v-2.03c-3.34.72-4.04-1.61-4.04-1.61-.55-1.38-1.34-1.75-1.34-1.75-1.09-.74.08-.73.08-.73 1.21.09 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 3-.4c1.02.004 2.04.14 3 .4 2.28-1.55 3.29-1.23 3.29-1.23.66 1.66.25 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.49 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.22.7.83.58C20.57 21.8 24 17.3 24 12c0-6.63-5.37-12-12-12z"/></svg>
-      View on GitHub
-    </a>
-  </div>
+    <div class="hero-actions">
+      <a href="https://github.com/virendra2902/breadcrumb-core#quick-start" target="_blank" rel="noopener"
+        class="btn-p">Get started →</a>
+      <a href="https://github.com/virendra2902/breadcrumb-core" target="_blank" rel="noopener" class="btn-s">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+          <path
+            d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.2 11.38.6.11.82-.26.82-.58v-2.03c-3.34.72-4.04-1.61-4.04-1.61-.55-1.38-1.34-1.75-1.34-1.75-1.09-.74.08-.73.08-.73 1.21.09 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 3-.4c1.02.004 2.04.14 3 .4 2.28-1.55 3.29-1.23 3.29-1.23.66 1.66.25 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.49 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.22.7.83.58C20.57 21.8 24 17.3 24 12c0-6.63-5.37-12-12-12z" />
+        </svg>
+        View on GitHub
+      </a>
+    </div>
 
-  <!-- LIVE DEMO -->
-  <div class="demo-wrap">
-    <div class="demo-card">
-      <div class="demo-bar">
-        <div class="db-dots">
-          <div class="db-dot db-dot-r"></div>
-          <div class="db-dot db-dot-y"></div>
-          <div class="db-dot db-dot-g"></div>
+    <!-- LIVE DEMO -->
+    <div class="demo-wrap">
+      <div class="demo-card">
+        <div class="demo-bar">
+          <div class="db-dots">
+            <div class="db-dot db-dot-r"></div>
+            <div class="db-dot db-dot-y"></div>
+            <div class="db-dot db-dot-g"></div>
+          </div>
+          <div class="db-url">myapp.com/<span id="url-seg">products/123/reviews</span></div>
         </div>
-        <div class="db-url">myapp.com/<span id="url-seg">products/123/reviews</span></div>
-      </div>
-      <div class="demo-body">
-        <div class="demo-label">Auto-generated breadcrumb — click a path below</div>
-        <div class="bc-row" id="bc-live">
-          <!-- populated by JS -->
-        </div>
-        <div class="demo-paths">
-          <button class="path-btn" onclick="go('home')">/</button>
-          <button class="path-btn" onclick="go('products')">/products</button>
-          <button class="path-btn" onclick="go('product')">/products/123</button>
-          <button class="path-btn on" onclick="go('reviews')">/products/123/reviews</button>
-          <button class="path-btn" onclick="go('settings')">/settings</button>
-          <button class="path-btn" onclick="go('user')">/users/42</button>
+        <div class="demo-body">
+          <div class="demo-label">Auto-generated breadcrumb — click a path below</div>
+          <div class="bc-row" id="bc-live">
+            <!-- populated by JS -->
+          </div>
+          <div class="demo-paths">
+            <button class="path-btn" onclick="go('home')">/</button>
+            <button class="path-btn" onclick="go('products')">/products</button>
+            <button class="path-btn" onclick="go('product')">/products/123</button>
+            <button class="path-btn on" onclick="go('reviews')">/products/123/reviews</button>
+            <button class="path-btn" onclick="go('settings')">/settings</button>
+            <button class="path-btn" onclick="go('user')">/users/42</button>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="install-strip">
-    <span class="install-cmd">npm install breadcrumb-core</span>
-    <button class="copy-btn" id="copy-btn" onclick="copyCmd()">Copy</button>
-  </div>
-</section>
+    <div class="install-strip">
+      <span class="install-cmd">npm install breadcrumb-core</span>
+      <button class="copy-btn" id="copy-btn" onclick="copyCmd()">Copy</button>
+    </div>
+  </section>
 
-<div class="divider"></div>
+  <div class="divider"></div>
 
-<!-- PROBLEM / SOLUTION -->
-<section class="wrap" id="problem">
-  <div class="s-tag">The problem</div>
-  <div class="s-title">Stop writing breadcrumbs<br/>on every page</div>
-  <p class="s-sub">Route changes silently break them. Dynamic labels get duplicated. Nobody wins.</p>
+  <!-- PROBLEM / SOLUTION -->
+  <section class="wrap" id="problem">
+    <div class="s-tag">The problem</div>
+    <div class="s-title">Stop writing breadcrumbs<br />on every page</div>
+    <p class="s-sub">Route changes silently break them. Dynamic labels get duplicated. Nobody wins.</p>
 
-  <div class="split">
-    <div>
-      <div class="cblock">
-        <div class="chead">
-          <span class="cfile">products/[id]/reviews.tsx</span>
-          <span class="ctag ctag-bad">Before</span>
-        </div>
-        <pre><span class="cm">// Written by hand on every page 😩</span>
+    <div class="split">
+      <div>
+        <div class="cblock">
+          <div class="chead">
+            <span class="cfile">products/[id]/reviews.tsx</span>
+            <span class="ctag ctag-bad">Before</span>
+          </div>
+          <pre><span class="cm">// Written by hand on every page 😩</span>
 <span class="tg">&lt;Breadcrumb&gt;</span>
   <span class="tg">&lt;Item&gt;</span>Home<span class="tg">&lt;/Item&gt;</span>
   <span class="tg">&lt;Item&gt;</span>Products<span class="tg">&lt;/Item&gt;</span>
@@ -440,16 +1187,16 @@ footer {
 
 <span class="cm">// Repeat on 40 other pages...</span>
 <span class="cm">// Route changes = silent breakage 💀</span></pre>
-      </div>
-    </div>
-
-    <div>
-      <div class="cblock">
-        <div class="chead">
-          <span class="cfile">routes.ts + any page</span>
-          <span class="ctag ctag-good">After</span>
         </div>
-        <pre><span class="cm">// Define once ✅</span>
+      </div>
+
+      <div>
+        <div class="cblock">
+          <div class="chead">
+            <span class="cfile">routes.ts + any page</span>
+            <span class="ctag ctag-good">After</span>
+          </div>
+          <pre><span class="cm">// Define once ✅</span>
 <span class="kw">export const</span> routes = [
   { path: <span class="str">"/"</span>, label: <span class="str">"Home"</span> },
   { path: <span class="str">"/products"</span>, label: <span class="str">"Products"</span> },
@@ -465,213 +1212,263 @@ footer {
 <span class="cm">// Any page — zero code needed</span>
 <span class="tg">&lt;AutoBreadcrumb /&gt;</span>
 <span class="cm">// → Home / Products / iPhone 15 / Reviews</span></pre>
+        </div>
       </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<div class="divider"></div>
+  <div class="divider"></div>
 
-<!-- HOW IT WORKS -->
-<section class="wrap" id="how-it-works">
-  <div class="s-tag">How it works</div>
-  <div class="s-title">4 steps. Zero config.</div>
-  <p class="s-sub">The library reads your route definitions once and handles everything automatically.</p>
+  <!-- HOW IT WORKS -->
+  <section class="wrap" id="how-it-works">
+    <div class="s-tag">How it works</div>
+    <div class="s-title">4 steps. Zero config.</div>
+    <p class="s-sub">The library reads your route definitions once and handles everything automatically.</p>
 
-  <div class="steps">
-    <div class="step">
-      <div class="step-n">1</div>
-      <h4>Parse URL</h4>
-      <p><code style="font-family:var(--mono);font-size:0.8em">/products/123/reviews</code> becomes four typed ancestor segments</p>
-    </div>
-    <div class="step">
-      <div class="step-n">2</div>
-      <h4>Match routes</h4>
-      <p>Each segment matched against your config with named param extraction</p>
-    </div>
-    <div class="step">
-      <div class="step-n">3</div>
-      <h4>Resolve labels</h4>
-      <p>Strings used directly. Async functions awaited and cached for instant back-nav</p>
-    </div>
-    <div class="step">
-      <div class="step-n">4</div>
-      <h4>Render</h4>
-      <p>Your <code style="font-family:var(--mono);font-size:0.8em">&lt;AutoBreadcrumb&gt;</code> renders. Skeleton shown while async resolves</p>
-    </div>
-  </div>
-</section>
-
-<div class="divider"></div>
-
-<!-- FEATURES -->
-<section class="wrap" id="features">
-  <div class="s-tag">Features</div>
-  <div class="s-title">Everything you needed<br/>but couldn't find</div>
-  <p class="s-sub">The combination no existing solution provides.</p>
-
-  <div class="feat-grid">
-    <div class="feat-card">
-      <div class="ficon fi-g">⚡</div>
-      <h3>Async labels with cache</h3>
-      <p>Labels can be async functions. Results are cached by <code>path + params</code> so back-navigation is instant. Pass <code>renderSkeleton</code> for a loading state.</p>
-    </div>
-    <div class="feat-card">
-      <div class="ficon fi-b">🔍</div>
-      <h3>Schema.org JSON-LD</h3>
-      <p>One prop enables automatic <code>BreadcrumbList</code> structured data injection for Google rich results. No extra libraries.</p>
-    </div>
-    <div class="feat-card">
-      <div class="ficon fi-a">🙈</div>
-      <h3>Hidden segments</h3>
-      <p>Mark layout-only routes with <code>hidden: true</code> and they're skipped in the breadcrumb without affecting your routing at all.</p>
-    </div>
-    <div class="feat-card">
-      <div class="ficon fi-g">📄</div>
-      <h3>Document title sync</h3>
-      <p>Set <code>syncDocumentTitle</code> and the browser tab updates to <code>iPhone 15 — Products — MyApp</code> automatically on every navigation.</p>
-    </div>
-    <div class="feat-card">
-      <div class="ficon fi-b">🎨</div>
-      <h3>Headless hook</h3>
-      <p>Use <code>useBreadcrumb()</code> to get raw items and build fully custom renders with your own design system. Zero opinions on markup.</p>
-    </div>
-    <div class="feat-card">
-      <div class="ficon fi-r">🗜️</div>
-      <h3>Smart collapsing</h3>
-      <p>Set <code>maxItems={4}</code> and deep paths collapse in the middle with <code>…</code> automatically. No extra logic needed.</p>
-    </div>
-  </div>
-</section>
-
-<div class="divider"></div>
-
-<!-- ADAPTERS -->
-<section class="wrap" id="adapters">
-  <div class="s-tag">Adapters</div>
-  <div class="s-title">Works with your router</div>
-  <p class="s-sub">Each adapter reads pathname automatically. Same API, every framework.</p>
-
-  <div class="adp-grid">
-    <div class="adp-card">
-      <div class="adp-name">react-router <span class="adp-badge">v6+</span></div>
-      <div class="adp-code">
-        import { AutoBreadcrumb }<br/>
-        from <b>'breadcrumb-core/react-router'</b>
+    <div class="steps">
+      <div class="step">
+        <div class="step-n">1</div>
+        <h4>Parse URL</h4>
+        <p><code style="font-family:var(--mono);font-size:0.8em">/products/123/reviews</code> becomes four typed
+          ancestor segments</p>
+      </div>
+      <div class="step">
+        <div class="step-n">2</div>
+        <h4>Match routes</h4>
+        <p>Each segment matched against your config with named param extraction</p>
+      </div>
+      <div class="step">
+        <div class="step-n">3</div>
+        <h4>Resolve labels</h4>
+        <p>Strings used directly. Async functions awaited and cached for instant back-nav</p>
+      </div>
+      <div class="step">
+        <div class="step-n">4</div>
+        <h4>Render</h4>
+        <p>Your <code style="font-family:var(--mono);font-size:0.8em">&lt;AutoBreadcrumb&gt;</code> renders. Skeleton
+          shown while async resolves</p>
       </div>
     </div>
-    <div class="adp-card">
-      <div class="adp-name">next.js <span class="adp-badge">app router</span></div>
-      <div class="adp-code">
-        import { AutoBreadcrumb }<br/>
-        from <b>'breadcrumb-core/next'</b>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- FEATURES -->
+  <section class="wrap" id="features">
+    <div class="s-tag">Features</div>
+    <div class="s-title">Everything you needed<br />but couldn't find</div>
+    <p class="s-sub">The combination no existing solution provides.</p>
+
+    <div class="feat-grid">
+      <div class="feat-card">
+        <div class="ficon fi-g">⚡</div>
+        <h3>Async labels with cache</h3>
+        <p>Labels can be async functions. Results are cached by <code>path + params</code> so back-navigation is
+          instant. Pass <code>renderSkeleton</code> for a loading state.</p>
+      </div>
+      <div class="feat-card">
+        <div class="ficon fi-b">🔍</div>
+        <h3>Schema.org JSON-LD</h3>
+        <p>One prop enables automatic <code>BreadcrumbList</code> structured data injection for Google rich results. No
+          extra libraries.</p>
+      </div>
+      <div class="feat-card">
+        <div class="ficon fi-a">🙈</div>
+        <h3>Hidden segments</h3>
+        <p>Mark layout-only routes with <code>hidden: true</code> and they're skipped in the breadcrumb without
+          affecting your routing at all.</p>
+      </div>
+      <div class="feat-card">
+        <div class="ficon fi-g">📄</div>
+        <h3>Document title sync</h3>
+        <p>Set <code>syncDocumentTitle</code> and the browser tab updates to <code>iPhone 15 — Products — MyApp</code>
+          automatically on every navigation.</p>
+      </div>
+      <div class="feat-card">
+        <div class="ficon fi-b">🎨</div>
+        <h3>Headless hook</h3>
+        <p>Use <code>useBreadcrumb()</code> to get raw items and build fully custom renders with your own design system.
+          Zero opinions on markup.</p>
+      </div>
+      <div class="feat-card">
+        <div class="ficon fi-r">🗜️</div>
+        <h3>Smart collapsing</h3>
+        <p>Set <code>maxItems={4}</code> and deep paths collapse in the middle with <code>…</code> automatically. No
+          extra logic needed.</p>
       </div>
     </div>
-    <div class="adp-card">
-      <div class="adp-name">tanstack router <span class="adp-badge">v1</span></div>
-      <div class="adp-code">
-        import { AutoBreadcrumb }<br/>
-        from <b>'breadcrumb-core/tanstack-router'</b>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- ADAPTERS -->
+  <section class="wrap" id="adapters">
+    <div class="s-tag">Adapters</div>
+    <div class="s-title">Works with your router</div>
+    <p class="s-sub">Each adapter reads pathname automatically. Same API, every framework.</p>
+
+    <div class="adp-grid">
+      <div class="adp-card">
+        <div class="adp-name">react-router <span class="adp-badge">v6+</span></div>
+        <div class="adp-code">
+          import { AutoBreadcrumb }<br />
+          from <b>'breadcrumb-core/react-router'</b>
+        </div>
+      </div>
+      <div class="adp-card">
+        <div class="adp-name">next.js <span class="adp-badge">app router</span></div>
+        <div class="adp-code">
+          import { AutoBreadcrumb }<br />
+          from <b>'breadcrumb-core/next'</b>
+        </div>
+      </div>
+      <div class="adp-card">
+        <div class="adp-name">tanstack router <span class="adp-badge">v1</span></div>
+        <div class="adp-code">
+          import { AutoBreadcrumb }<br />
+          from <b>'breadcrumb-core/tanstack-router'</b>
+        </div>
+      </div>
+      <div class="adp-card">
+        <div class="adp-name">headless <span class="adp-badge">any</span></div>
+        <div class="adp-code">
+          import { useBreadcrumb }<br />
+          from <b>'breadcrumb-core/headless'</b>
+        </div>
       </div>
     </div>
-    <div class="adp-card">
-      <div class="adp-name">headless <span class="adp-badge">any</span></div>
-      <div class="adp-code">
-        import { useBreadcrumb }<br/>
-        from <b>'breadcrumb-core/headless'</b>
-      </div>
-    </div>
-  </div>
-</section>
+  </section>
 
-<div class="divider"></div>
+  <div class="divider"></div>
 
-<!-- COMPARE -->
-<section class="wrap" id="compare">
-  <div class="s-tag">Comparison</div>
-  <div class="s-title">Why existing tools fall short</div>
-  <p class="s-sub">2M+ combined weekly npm installs — none covering all the cases.</p>
+  <!-- COMPARE -->
+  <section class="wrap" id="compare">
+    <div class="s-tag">Comparison</div>
+    <div class="s-title">Why existing tools fall short</div>
+    <p class="s-sub">2M+ combined weekly npm installs — none covering all the cases.</p>
 
-  <div class="tbl-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>Tool</th>
-          <th>Async labels</th>
-          <th>SEO JSON-LD</th>
-          <th>Multi-router</th>
-          <th>Headless hook</th>
-          <th>Cache</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr class="hl">
-          <td>breadcrumb-core ✦</td>
-          <td><span class="yes">✓</span></td>
-          <td><span class="yes">✓</span></td>
-          <td><span class="yes">✓</span></td>
-          <td><span class="yes">✓</span></td>
-          <td><span class="yes">✓</span></td>
-        </tr>
-        <tr>
-          <td>use-react-router-breadcrumbs</td>
-          <td><span class="no">✗</span></td>
-          <td><span class="no">✗</span></td>
-          <td><span class="no">✗</span></td>
-          <td><span class="yes">✓</span></td>
-          <td><span class="no">✗</span></td>
-        </tr>
-        <tr>
-          <td>antd Breadcrumb</td>
-          <td><span class="no">✗</span></td>
-          <td><span class="no">✗</span></td>
-          <td><span class="no">✗</span></td>
-          <td><span class="no">✗</span></td>
-          <td><span class="no">✗</span></td>
-        </tr>
-        <tr>
-          <td>Manual per-page</td>
-          <td><span class="no">✗</span></td>
-          <td><span class="no">✗</span></td>
-          <td><span class="yes">✓</span></td>
-          <td><span class="no">✗</span></td>
-          <td><span class="no">✗</span></td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-</section>
-
-<div class="divider"></div>
-
-<!-- API -->
-<section class="wrap" id="api">
-  <div class="s-tag">API reference</div>
-  <div class="s-title">Simple. Composable. Typed.</div>
-  <p class="s-sub">Full TypeScript support. Every prop documented.</p>
-
-  <div class="api-grid">
-    <div class="api-card">
-      <div class="api-head"><h4>&lt;AutoBreadcrumb /&gt;</h4></div>
-      <table class="api-tbl">
-        <thead><tr><th>Prop</th><th>Default</th><th>Description</th></tr></thead>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Tool</th>
+            <th>Async labels</th>
+            <th>SEO JSON-LD</th>
+            <th>Multi-router</th>
+            <th>Headless hook</th>
+            <th>Cache</th>
+          </tr>
+        </thead>
         <tbody>
-          <tr><td>separator</td><td>"/"</td><td>Between items</td></tr>
-          <tr><td>maxItems</td><td>—</td><td>Collapse middle with …</td></tr>
-          <tr><td>showHome</td><td>true</td><td>Include root item</td></tr>
-          <tr><td>injectJsonLd</td><td>false</td><td>Schema.org JSON-LD</td></tr>
-          <tr><td>syncDocumentTitle</td><td>false</td><td>Auto document.title</td></tr>
-          <tr><td>appName</td><td>—</td><td>Appended to synced title</td></tr>
-          <tr><td>renderItem</td><td>—</td><td>Custom item renderer fn</td></tr>
-          <tr><td>renderSkeleton</td><td>—</td><td>Loading placeholder</td></tr>
+          <tr class="hl">
+            <td>breadcrumb-core ✦</td>
+            <td><span class="yes">✓</span></td>
+            <td><span class="yes">✓</span></td>
+            <td><span class="yes">✓</span></td>
+            <td><span class="yes">✓</span></td>
+            <td><span class="yes">✓</span></td>
+          </tr>
+          <tr>
+            <td>use-react-router-breadcrumbs</td>
+            <td><span class="no">✗</span></td>
+            <td><span class="no">✗</span></td>
+            <td><span class="no">✗</span></td>
+            <td><span class="yes">✓</span></td>
+            <td><span class="no">✗</span></td>
+          </tr>
+          <tr>
+            <td>antd Breadcrumb</td>
+            <td><span class="no">✗</span></td>
+            <td><span class="no">✗</span></td>
+            <td><span class="no">✗</span></td>
+            <td><span class="no">✗</span></td>
+            <td><span class="no">✗</span></td>
+          </tr>
+          <tr>
+            <td>Manual per-page</td>
+            <td><span class="no">✗</span></td>
+            <td><span class="no">✗</span></td>
+            <td><span class="yes">✓</span></td>
+            <td><span class="no">✗</span></td>
+            <td><span class="no">✗</span></td>
+          </tr>
         </tbody>
       </table>
     </div>
+  </section>
 
-    <div class="api-card">
-      <div class="api-head"><h4>RouteConfig interface</h4></div>
-      <div class="cblock" style="border:none;border-radius:0;">
-        <pre style="font-size:0.76rem;"><span class="kw">interface</span> <span class="fn">RouteConfig</span> {
+  <div class="divider"></div>
+
+  <!-- API -->
+  <section class="wrap" id="api">
+    <div class="s-tag">API reference</div>
+    <div class="s-title">Simple. Composable. Typed.</div>
+    <p class="s-sub">Full TypeScript support. Every prop documented.</p>
+
+    <div class="api-grid">
+      <div class="api-card">
+        <div class="api-head">
+          <h4>&lt;AutoBreadcrumb /&gt;</h4>
+        </div>
+        <table class="api-tbl">
+          <thead>
+            <tr>
+              <th>Prop</th>
+              <th>Default</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>separator</td>
+              <td>"/"</td>
+              <td>Between items</td>
+            </tr>
+            <tr>
+              <td>maxItems</td>
+              <td>—</td>
+              <td>Collapse middle with …</td>
+            </tr>
+            <tr>
+              <td>showHome</td>
+              <td>true</td>
+              <td>Include root item</td>
+            </tr>
+            <tr>
+              <td>injectJsonLd</td>
+              <td>false</td>
+              <td>Schema.org JSON-LD</td>
+            </tr>
+            <tr>
+              <td>syncDocumentTitle</td>
+              <td>false</td>
+              <td>Auto document.title</td>
+            </tr>
+            <tr>
+              <td>appName</td>
+              <td>—</td>
+              <td>Appended to synced title</td>
+            </tr>
+            <tr>
+              <td>renderItem</td>
+              <td>—</td>
+              <td>Custom item renderer fn</td>
+            </tr>
+            <tr>
+              <td>renderSkeleton</td>
+              <td>—</td>
+              <td>Loading placeholder</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="api-card">
+        <div class="api-head">
+          <h4>RouteConfig interface</h4>
+        </div>
+        <div class="cblock" style="border:none;border-radius:0;">
+          <pre style="font-size:0.76rem;"><span class="kw">interface</span> <span class="fn">RouteConfig</span> {
   path:   <span class="str">string</span>
   label:
     | <span class="str">string</span>
@@ -689,109 +1486,113 @@ footer {
   isLast:   <span class="str">boolean</span>
   icon?:    <span class="jsx">ReactNode</span>
 }</pre>
+        </div>
       </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<div class="divider"></div>
+  <div class="divider"></div>
 
-<!-- CTA -->
-<section class="cta">
-  <div class="cta-bg"></div>
-  <h2>Ship <em>better</em> breadcrumbs<br/>in 5 minutes</h2>
-  <p>One install. One provider. Zero breadcrumb code per page. Ever.</p>
-  <div class="cta-btns">
-    <a href="https://github.com/virendra2902/breadcrumb-core#quick-start" target="_blank" rel="noopener" class="btn-cta">Read the docs →</a>
-    <a href="https://github.com/virendra2902/breadcrumb-core" target="_blank" rel="noopener" class="btn-ghost">View on GitHub</a>
-  </div>
-</section>
+  <!-- CTA -->
+  <section class="cta">
+    <div class="cta-bg"></div>
+    <h2>Ship <em>better</em> breadcrumbs<br />in 5 minutes</h2>
+    <p>One install. One provider. Zero breadcrumb code per page. Ever.</p>
+    <div class="cta-btns">
+      <a href="https://github.com/virendra2902/breadcrumb-core#quick-start" target="_blank" rel="noopener"
+        class="btn-cta">Read the docs →</a>
+      <a href="https://github.com/virendra2902/breadcrumb-core" target="_blank" rel="noopener" class="btn-ghost">View on
+        GitHub</a>
+    </div>
+  </section>
 
-<!-- FOOTER -->
-<footer>
-  <div class="f-logo"><em>auto</em>-breadcrumb</div>
-  <div class="f-links">
-    <a href="https://github.com/virendra2902/breadcrumb-core#readme" target="_blank" rel="noopener">Docs</a>
-    <a href="https://github.com/virendra2902/breadcrumb-core" target="_blank" rel="noopener">GitHub</a>
-    <a href="https://www.npmjs.com/package/breadcrumb-core" target="_blank" rel="noopener">npm</a>
-    <a href="https://github.com/virendra2902/breadcrumb-core/releases" target="_blank" rel="noopener">Changelog</a>
-    <a href="https://github.com/virendra2902/breadcrumb-core/issues" target="_blank" rel="noopener">Issues</a>
-  </div>
-  <div class="f-copy">MIT License · <a href="https://github.com/virendra2902" style="color:inherit;text-decoration:none;">virendra2902</a></div>
-</footer>
+  <!-- FOOTER -->
+  <footer>
+    <div class="f-logo"><em>auto</em>-breadcrumb</div>
+    <div class="f-links">
+      <a href="https://github.com/virendra2902/breadcrumb-core#readme" target="_blank" rel="noopener">Docs</a>
+      <a href="https://github.com/virendra2902/breadcrumb-core" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://www.npmjs.com/package/breadcrumb-core" target="_blank" rel="noopener">npm</a>
+      <a href="https://github.com/virendra2902/breadcrumb-core/releases" target="_blank" rel="noopener">Changelog</a>
+      <a href="https://github.com/virendra2902/breadcrumb-core/issues" target="_blank" rel="noopener">Issues</a>
+    </div>
+    <div class="f-copy">MIT License · <a href="https://github.com/virendra2902"
+        style="color:inherit;text-decoration:none;">virendra2902</a></div>
+  </footer>
 
-<script>
-const PATHS = {
-  home:     { seg: '',                   url: 'myapp.com/',                  items: [{ l:'Home', last:true }] },
-  products: { seg: 'products',           url: 'myapp.com/products',          items: [{ l:'Home' }, { l:'Products', last:true }] },
-  product:  { seg: 'products/123',       url: 'myapp.com/products/123',      items: [{ l:'Home' }, { l:'Products' }, { l:'iPhone 15 Pro', last:true, async:true }] },
-  reviews:  { seg: 'products/123/reviews', url:'myapp.com/products/123/reviews', items:[{ l:'Home' }, { l:'Products' }, { l:'iPhone 15 Pro', async:true }, { l:'Reviews', last:true }] },
-  settings: { seg: 'settings',           url: 'myapp.com/settings',          items: [{ l:'Home' }, { l:'Settings', last:true }] },
-  user:     { seg: 'users/42',           url: 'myapp.com/users/42',          items: [{ l:'Home' }, { l:'Alex Johnson', last:true, async:true }] },
-}
-
-function render(items) {
-  const container = document.getElementById('bc-live')
-  container.innerHTML = ''
-  items.forEach((item, i) => {
-    if (i > 0) {
-      const sep = document.createElement('span')
-      sep.className = 'bc-sep'
-      sep.textContent = '/'
-      container.appendChild(sep)
+  <script>
+    const PATHS = {
+      home: { seg: '', url: 'myapp.com/', items: [{ l: 'Home', last: true }] },
+      products: { seg: 'products', url: 'myapp.com/products', items: [{ l: 'Home' }, { l: 'Products', last: true }] },
+      product: { seg: 'products/123', url: 'myapp.com/products/123', items: [{ l: 'Home' }, { l: 'Products' }, { l: 'iPhone 15 Pro', last: true, async: true }] },
+      reviews: { seg: 'products/123/reviews', url: 'myapp.com/products/123/reviews', items: [{ l: 'Home' }, { l: 'Products' }, { l: 'iPhone 15 Pro', async: true }, { l: 'Reviews', last: true }] },
+      settings: { seg: 'settings', url: 'myapp.com/settings', items: [{ l: 'Home' }, { l: 'Settings', last: true }] },
+      user: { seg: 'users/42', url: 'myapp.com/users/42', items: [{ l: 'Home' }, { l: 'Alex Johnson', last: true, async: true }] },
     }
-    const el = document.createElement('span')
-    el.className = item.last ? 'bc-cur' : 'bc-link'
-    el.textContent = item.l
-    container.appendChild(el)
-  })
-}
 
-function renderSkeleton(items) {
-  const container = document.getElementById('bc-live')
-  container.innerHTML = ''
-  items.forEach((item, i) => {
-    if (i > 0) {
-      const sep = document.createElement('span')
-      sep.className = 'bc-sep'; sep.textContent = '/'; container.appendChild(sep)
+    function render(items) {
+      const container = document.getElementById('bc-live')
+      container.innerHTML = ''
+      items.forEach((item, i) => {
+        if (i > 0) {
+          const sep = document.createElement('span')
+          sep.className = 'bc-sep'
+          sep.textContent = '/'
+          container.appendChild(sep)
+        }
+        const el = document.createElement('span')
+        el.className = item.last ? 'bc-cur' : 'bc-link'
+        el.textContent = item.l
+        container.appendChild(el)
+      })
     }
-    if (item.async) {
-      const sk = document.createElement('span')
-      sk.className = 'bc-skel'
-      sk.style.width = (60 + Math.random() * 40) + 'px'
-      container.appendChild(sk)
-    } else {
-      const el = document.createElement('span')
-      el.className = item.last ? 'bc-cur' : 'bc-link'
-      el.textContent = item.l; container.appendChild(el)
+
+    function renderSkeleton(items) {
+      const container = document.getElementById('bc-live')
+      container.innerHTML = ''
+      items.forEach((item, i) => {
+        if (i > 0) {
+          const sep = document.createElement('span')
+          sep.className = 'bc-sep'; sep.textContent = '/'; container.appendChild(sep)
+        }
+        if (item.async) {
+          const sk = document.createElement('span')
+          sk.className = 'bc-skel'
+          sk.style.width = (60 + Math.random() * 40) + 'px'
+          container.appendChild(sk)
+        } else {
+          const el = document.createElement('span')
+          el.className = item.last ? 'bc-cur' : 'bc-link'
+          el.textContent = item.l; container.appendChild(el)
+        }
+      })
     }
-  })
-}
 
-function go(key) {
-  document.querySelectorAll('.path-btn').forEach(b => b.classList.remove('on'))
-  event.target.classList.add('on')
-  const cfg = PATHS[key]
-  document.getElementById('url-seg').textContent = cfg.seg || ''
-  const hasAsync = cfg.items.some(i => i.async)
-  if (hasAsync) {
-    renderSkeleton(cfg.items)
-    setTimeout(() => render(cfg.items), 750)
-  } else {
-    render(cfg.items)
-  }
-}
+    function go(key) {
+      document.querySelectorAll('.path-btn').forEach(b => b.classList.remove('on'))
+      event.target.classList.add('on')
+      const cfg = PATHS[key]
+      document.getElementById('url-seg').textContent = cfg.seg || ''
+      const hasAsync = cfg.items.some(i => i.async)
+      if (hasAsync) {
+        renderSkeleton(cfg.items)
+        setTimeout(() => render(cfg.items), 750)
+      } else {
+        render(cfg.items)
+      }
+    }
 
-function copyCmd() {
-  navigator.clipboard.writeText('npm install breadcrumb-core').then(() => {
-    const btn = document.getElementById('copy-btn')
-    btn.textContent = 'Copied!'
-    setTimeout(() => { btn.textContent = 'Copy' }, 2000)
-  })
-}
+    function copyCmd() {
+      navigator.clipboard.writeText('npm install breadcrumb-core').then(() => {
+        const btn = document.getElementById('copy-btn')
+        btn.textContent = 'Copied!'
+        setTimeout(() => { btn.textContent = 'Copy' }, 2000)
+      })
+    }
 
-// Initial render
-render(PATHS.reviews.items)
-</script>
+    // Initial render
+    render(PATHS.reviews.items)
+  </script>
 </body>
+
 </html>

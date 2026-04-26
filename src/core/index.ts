@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────
-// auto-breadcrumb · core
+// breadcrumb-core · core  v2.0.0
 // Router-agnostic logic: parsing, matching, resolving, SEO
 // ─────────────────────────────────────────────
 
@@ -12,14 +12,25 @@ export interface RouteParams {
 }
 
 export interface RouteConfig {
-  /** Express-style path, e.g. "/products/:id" */
+  /** Express-style path — supports named params (:id), optional (:id?), wildcards (* ) */
   path: string
-  /** Static label or a sync/async function receiving matched params */
-  label: string | ((ctx: { params: RouteParams }) => string | Promise<string>)
+  /** Static label or sync/async fn receiving matched params + full pathname */
+  label: string | ((ctx: { params: RouteParams; pathname: string }) => string | Promise<string>)
   /** Optional icon rendered before the label */
   icon?: ReactNode
   /** When true the segment is excluded from the rendered breadcrumb */
   hidden?: boolean
+  /**
+   * v2: Cache TTL in milliseconds.
+   * After this duration the cached label is invalidated and re-fetched.
+   * Defaults to Infinity (cache forever).
+   */
+  cacheTtl?: number
+  /**
+   * v2: Called whenever this route segment is matched during navigation.
+   * Useful for analytics / side-effects.
+   */
+  onMatch?: (ctx: { params: RouteParams; pathname: string }) => void
 }
 
 export interface BreadcrumbItem {
@@ -29,6 +40,8 @@ export interface BreadcrumbItem {
   isLast: boolean
   isLoading?: boolean
   icon?: ReactNode
+  /** v2: The matched RouteConfig — useful for custom renders */
+  route?: RouteConfig
 }
 
 // ─── Internal ────────────────────────────────
@@ -39,40 +52,51 @@ interface ParsedSegment {
   params: RouteParams
 }
 
+interface CacheEntry {
+  label: string
+  ts: number
+}
+
 // ─── Route matching ───────────────────────────
 
 /**
  * Match an Express-style pattern against a concrete URL segment.
- * Returns matched status and any extracted named params.
- *
- * @example
- * matchRoute('/products/:id', '/products/42')
- * // → { matched: true, params: { id: '42' } }
+ * Supports :param, :param?, and trailing * (wildcard / splat).
  */
 export function matchRoute(
   pattern: string,
   url: string
 ): { matched: boolean; params: RouteParams } {
   const paramNames: string[] = []
+  const hasWildcard = pattern.endsWith('*')
+  const basePattern = hasWildcard ? pattern.slice(0, -1).replace(/\/$/, '') : pattern
 
-  const regexStr = pattern
-    .replace(/[-[\]{}()*+?.,\\^$|#\s]/g, (c) =>
-      c === ':' || c === '/' ? c : `\\${c}`
+  let regexStr = basePattern
+    .replace(/[-[\]{}()+.,\\^$|#\s]/g, (c) =>
+      c === ':' || c === '/' || c === '?' ? c : `\\${c}`
     )
+    .replace(/:([^/?]+)\?/g, (_: string, name: string) => {
+      paramNames.push(name)
+      return '([^/]*)?'
+    })
     .replace(/:([^/]+)/g, (_: string, name: string) => {
       paramNames.push(name)
       return '([^/]+)'
     })
     .replace(/\//g, '\\/')
 
+  if (hasWildcard) {
+    paramNames.push('*')
+    regexStr += '(?:\\/(.*))?'
+  }
+
   const regex = new RegExp(`^${regexStr}$`)
   const match = url.match(regex)
-
   if (!match) return { matched: false, params: {} }
 
   const params: RouteParams = {}
   paramNames.forEach((name, i) => {
-    params[name] = match[i + 1]
+    if (match[i + 1] !== undefined) params[name] = match[i + 1]
   })
 
   return { matched: true, params }
@@ -80,12 +104,6 @@ export function matchRoute(
 
 // ─── URL parsing ──────────────────────────────
 
-/**
- * Split a pathname into ancestor segments and match each to a route.
- *
- * /products/123/reviews
- * → ["/", "/products", "/products/123", "/products/123/reviews"]
- */
 export function parsePathSegments(
   pathname: string,
   routes: RouteConfig[]
@@ -94,14 +112,12 @@ export function parsePathSegments(
   const parts = cleanPath.split('/').filter(Boolean)
   const segments: ParsedSegment[] = []
 
-  // Root always first
   const rootRoute = routes.find((r) => r.path === '/') ?? null
   segments.push({ path: '/', route: rootRoute, params: {} })
 
   let currentPath = ''
   for (const part of parts) {
     currentPath += `/${part}`
-
     let matched: RouteConfig | null = null
     let params: RouteParams = {}
 
@@ -110,6 +126,7 @@ export function parsePathSegments(
       if (result.matched) {
         matched = route
         params = result.params
+        matched.onMatch?.({ params, pathname: currentPath })
         break
       }
     }
@@ -120,46 +137,53 @@ export function parsePathSegments(
   return segments
 }
 
-// ─── Label resolution + cache ─────────────────
+// ─── Label cache ──────────────────────────────
 
-const labelCache = new Map<string, string>()
+const labelCache = new Map<string, CacheEntry>()
 
 function cacheKey(path: string, params: RouteParams): string {
   return `${path}::${JSON.stringify(params)}`
 }
 
-/**
- * Resolve a label to a string.
- * Results are cached by (path, params) so back-navigation is instant.
- */
 export async function resolveLabel(
   route: RouteConfig,
-  params: RouteParams
+  params: RouteParams,
+  pathname: string
 ): Promise<string> {
   const key = cacheKey(route.path, params)
+  const ttl = route.cacheTtl ?? Infinity
   const cached = labelCache.get(key)
-  if (cached !== undefined) return cached
+
+  if (cached) {
+    const age = Date.now() - cached.ts
+    if (ttl === Infinity || age < ttl) return cached.label
+  }
 
   const label =
     typeof route.label === 'string'
       ? route.label
-      : await route.label({ params })
+      : await route.label({ params, pathname })
 
-  labelCache.set(key, label)
+  labelCache.set(key, { label, ts: Date.now() })
   return label
 }
 
-/** Clear the label cache — useful in tests or after user sign-out */
+/** Clear the entire label cache */
 export function clearLabelCache(): void {
   labelCache.clear()
 }
 
+/**
+ * v2: Invalidate cache for a specific path + params combination.
+ * Call after mutations so the next navigation re-fetches the label.
+ * @example invalidateLabelCache('/products/:id', { id: '42' })
+ */
+export function invalidateLabelCache(path: string, params: RouteParams = {}): void {
+  labelCache.delete(cacheKey(path, params))
+}
+
 // ─── Breadcrumb builder ───────────────────────
 
-/**
- * Build the full resolved breadcrumb list for a given pathname.
- * Hidden routes and unmatched segments are filtered out.
- */
 export async function buildBreadcrumbs(
   pathname: string,
   routes: RouteConfig[]
@@ -167,10 +191,10 @@ export async function buildBreadcrumbs(
   const segments = parsePathSegments(pathname, routes)
   const visible = segments.filter((s) => s.route && !s.route.hidden)
 
-  const items = await Promise.all(
+  return Promise.all(
     visible.map(async (seg, idx) => {
       const label = seg.route
-        ? await resolveLabel(seg.route, seg.params)
+        ? await resolveLabel(seg.route, seg.params, seg.path)
         : seg.path
 
       return {
@@ -179,23 +203,15 @@ export async function buildBreadcrumbs(
         params: seg.params,
         isLast: idx === visible.length - 1,
         icon: seg.route?.icon,
+        route: seg.route ?? undefined,
       } satisfies BreadcrumbItem
     })
   )
-
-  return items
 }
 
 // ─── SEO ─────────────────────────────────────
 
-/**
- * Generate a Schema.org BreadcrumbList JSON-LD string.
- * Inject as <script type="application/ld+json"> for Google rich results.
- */
-export function generateJsonLd(
-  items: BreadcrumbItem[],
-  baseUrl = ''
-): string {
+export function generateJsonLd(items: BreadcrumbItem[], baseUrl = ''): string {
   return JSON.stringify({
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
