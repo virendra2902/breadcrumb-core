@@ -1,6 +1,6 @@
 {
   "name": "breadcrumb-core",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Zero-config breadcrumbs from your route config. Progressive loading, custom matchers, i18n, collapsible overflow, and adapters for React Router, Next.js, and TanStack Router.",
   "author": "virendra2902 <https://github.com/virendra2902>",
   "license": "MIT",
