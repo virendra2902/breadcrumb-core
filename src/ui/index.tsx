@@ -209,5 +209,6 @@ export function BreadcrumbSkeleton({ count = 3, height = '0.75rem' }: Breadcrumb
   )
 }
 
+// ✅ CORRECT — remove StyledBreadcrumbProps from the re-export line
 export { useBreadcrumb, useBreadcrumbLoading, useBreadcrumbHistory, useActiveRoute, useBreadcrumbLocale, AutoBreadcrumb }
-export type { AutoBreadcrumbProps, BreadcrumbItem, StyledBreadcrumbProps }
+export type { AutoBreadcrumbProps, BreadcrumbItem }
