@@ -1,7 +1,4 @@
-// ─────────────────────────────────────────────
-// breadcrumb-core · react-router  v2.0.0
-// React Router v6+ adapter
-// ─────────────────────────────────────────────
+// auto-breadcrumb · react-router  v3.0.0
 
 import { useLocation, Link } from 'react-router-dom'
 import type { ReactNode } from 'react'
@@ -11,24 +8,18 @@ import {
   useBreadcrumb,
   useBreadcrumbLoading,
   useBreadcrumbHistory,
+  useActiveRoute,
+  useBreadcrumbLocale,
   type AutoBreadcrumbProps,
   type BreadcrumbProviderProps as CoreProviderProps,
 } from '../headless'
 import type { RouteConfig, BreadcrumbItem } from '../core'
 
-export interface BreadcrumbProviderProps
-  extends Omit<CoreProviderProps, 'pathname'> { }
+export interface BreadcrumbProviderProps extends Omit<CoreProviderProps, 'pathname'> {}
 
 /**
  * Wrap your app once — reads pathname from React Router automatically.
- * Supports all v2 props: onNavigate, maxHistory.
- *
- * @example
- * <BrowserRouter>
- *   <BreadcrumbProvider routes={routes} onNavigate={(items) => analytics.track(items)}>
- *     <App />
- *   </BreadcrumbProvider>
- * </BrowserRouter>
+ * v3 extras: locales, transformLabel, onNavigate, maxHistory all supported.
  */
 export function BreadcrumbProvider({ routes, children, ...rest }: BreadcrumbProviderProps) {
   const { pathname } = useLocation()
@@ -39,10 +30,6 @@ export function BreadcrumbProvider({ routes, children, ...rest }: BreadcrumbProv
   )
 }
 
-/**
- * Drop-in breadcrumb using React Router's <Link>.
- * Supports all v2 props: ariaLabel, onItemClick.
- */
 export function AutoBreadcrumb(props: AutoBreadcrumbProps) {
   const defaultRenderer = (item: BreadcrumbItem, isLast: boolean): ReactNode =>
     isLast ? (
@@ -50,9 +37,8 @@ export function AutoBreadcrumb(props: AutoBreadcrumbProps) {
     ) : (
       <Link to={item.path}>{item.label}</Link>
     )
-
   return <CoreBreadcrumb {...props} renderItem={props.renderItem ?? defaultRenderer} />
 }
 
-export { useBreadcrumb, useBreadcrumbLoading, useBreadcrumbHistory }
+export { useBreadcrumb, useBreadcrumbLoading, useBreadcrumbHistory, useActiveRoute, useBreadcrumbLocale }
 export type { RouteConfig, BreadcrumbItem, AutoBreadcrumbProps }

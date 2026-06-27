@@ -1,7 +1,7 @@
 {
   "name": "breadcrumb-core",
-  "version": "2.0.0",
-  "description": "Zero-config breadcrumbs from your route config. Async labels, SEO JSON-LD, wildcard routes, navigation history, and adapters for React Router, Next.js, and TanStack Router.",
+  "version": "3.0.0",
+  "description": "Zero-config breadcrumbs from your route config. Progressive loading, custom matchers, i18n, collapsible overflow, and adapters for React Router, Next.js, and TanStack Router.",
   "author": "virendra2902 <https://github.com/virendra2902>",
   "license": "MIT",
   "homepage": "https://virendra2902.github.io/breadcrumb-core",
@@ -13,20 +13,10 @@
     "url": "https://github.com/virendra2902/breadcrumb-core/issues"
   },
   "keywords": [
-    "breadcrumb",
-    "auto-breadcrumb",
-    "react",
-    "react-router",
-    "nextjs",
-    "tanstack-router",
-    "navigation",
-    "seo",
-    "json-ld",
-    "schema-org",
-    "headless",
-    "typescript",
-    "wildcard-routes",
-    "breadcrumb-history"
+    "breadcrumb", "breadcrumb-core", "react", "react-router", "nextjs",
+    "tanstack-router", "navigation", "seo", "json-ld", "schema-org",
+    "headless", "typescript", "i18n", "progressive-loading",
+    "collapsible", "wildcard-routes", "custom-matcher"
   ],
   "main": "./dist/core/index.js",
   "module": "./dist/core/index.mjs",
@@ -63,12 +53,7 @@
       "require": "./dist/ui/index.js"
     }
   },
-  "files": [
-    "dist",
-    "README.md",
-    "CHANGELOG.md",
-    "LICENSE"
-  ],
+  "files": ["dist", "README.md", "CHANGELOG.md", "LICENSE"],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
@@ -80,9 +65,7 @@
     "react-dom": ">=17.0.0"
   },
   "peerDependenciesMeta": {
-    "react-dom": {
-      "optional": true
-    }
+    "react-dom": { "optional": true }
   },
   "devDependencies": {
     "@types/react": "^18.3.0",

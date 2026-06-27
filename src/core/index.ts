@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────
-// breadcrumb-core · core  v2.0.0
+// auto-breadcrumb · core  v3.0.0
 // Router-agnostic logic: parsing, matching, resolving, SEO
 // ─────────────────────────────────────────────
 
@@ -12,24 +12,22 @@ export interface RouteParams {
 }
 
 export interface RouteConfig {
-  /** Express-style path — supports named params (:id), optional (:id?), wildcards (* ) */
-  path: string
+  /**
+   * Route matcher. Three forms supported:
+   * - Express-style string: "/products/:id", "/docs/*", "/shop/:cat?"
+   * - RegExp with named groups: /^\/p\/(?<id>\d+)$/
+   * - Custom function: (pathname) => params object or null if no match
+   */
+  path: string | RegExp | ((pathname: string) => RouteParams | null)
   /** Static label or sync/async fn receiving matched params + full pathname */
   label: string | ((ctx: { params: RouteParams; pathname: string }) => string | Promise<string>)
   /** Optional icon rendered before the label */
   icon?: ReactNode
   /** When true the segment is excluded from the rendered breadcrumb */
   hidden?: boolean
-  /**
-   * v2: Cache TTL in milliseconds.
-   * After this duration the cached label is invalidated and re-fetched.
-   * Defaults to Infinity (cache forever).
-   */
+  /** Cache TTL in milliseconds. Defaults to Infinity (cache forever). */
   cacheTtl?: number
-  /**
-   * v2: Called whenever this route segment is matched during navigation.
-   * Useful for analytics / side-effects.
-   */
+  /** Called whenever this route segment is matched during navigation. */
   onMatch?: (ctx: { params: RouteParams; pathname: string }) => void
 }
 
@@ -38,9 +36,9 @@ export interface BreadcrumbItem {
   label: string
   params: RouteParams
   isLast: boolean
+  /** True while this specific item's async label is still resolving (v3: per-item, not global) */
   isLoading?: boolean
   icon?: ReactNode
-  /** v2: The matched RouteConfig — useful for custom renders */
   route?: RouteConfig
 }
 
@@ -60,8 +58,9 @@ interface CacheEntry {
 // ─── Route matching ───────────────────────────
 
 /**
- * Match an Express-style pattern against a concrete URL segment.
+ * Match an Express-style STRING pattern against a concrete URL segment.
  * Supports :param, :param?, and trailing * (wildcard / splat).
+ * Kept as a standalone export for string-only matching / backward compat.
  */
 export function matchRoute(
   pattern: string,
@@ -102,6 +101,61 @@ export function matchRoute(
   return { matched: true, params }
 }
 
+/**
+ * v3: Match a RouteConfig against a URL — dispatches across string / RegExp / function matchers.
+ */
+function matchSegment(
+  route: RouteConfig,
+  currentPath: string
+): { matched: boolean; params: RouteParams } {
+  const { path } = route
+
+  if (typeof path === 'string') {
+    return matchRoute(path, currentPath)
+  }
+
+  if (path instanceof RegExp) {
+    const m = currentPath.match(path)
+    if (!m) return { matched: false, params: {} }
+    const params: RouteParams = m.groups ? { ...m.groups } : {}
+    return { matched: true, params }
+  }
+
+  if (typeof path === 'function') {
+    const result = path(currentPath)
+    return result ? { matched: true, params: result } : { matched: false, params: {} }
+  }
+
+  return { matched: false, params: {} }
+}
+
+// ─── i18n locale prefix ───────────────────────
+
+/**
+ * v3: Strip a known locale prefix from a pathname before route matching.
+ * @example
+ * stripLocalePrefix('/en/products/42', ['en', 'fr', 'de'])
+ * // → { locale: 'en', rest: '/products/42' }
+ */
+export function stripLocalePrefix(
+  pathname: string,
+  locales: string[]
+): { locale: string | null; rest: string } {
+  const parts = pathname.split('/').filter(Boolean)
+  if (parts.length > 0 && locales.includes(parts[0])) {
+    const locale = parts[0]
+    const rest = '/' + parts.slice(1).join('/')
+    return { locale, rest: rest === '/' ? '/' : rest }
+  }
+  return { locale: null, rest: pathname }
+}
+
+/** v3: Re-prepend a locale prefix onto a resolved breadcrumb path. */
+export function withLocalePrefix(path: string, locale: string | null): string {
+  if (!locale) return path
+  return path === '/' ? `/${locale}` : `/${locale}${path}`
+}
+
 // ─── URL parsing ──────────────────────────────
 
 export function parsePathSegments(
@@ -122,7 +176,7 @@ export function parsePathSegments(
     let params: RouteParams = {}
 
     for (const route of routes) {
-      const result = matchRoute(route.path, currentPath)
+      const result = matchSegment(route, currentPath)
       if (result.matched) {
         matched = route
         params = result.params
@@ -141,8 +195,9 @@ export function parsePathSegments(
 
 const labelCache = new Map<string, CacheEntry>()
 
-function cacheKey(path: string, params: RouteParams): string {
-  return `${path}::${JSON.stringify(params)}`
+function cacheKey(route: RouteConfig, params: RouteParams): string {
+  const id = typeof route.path === 'string' ? route.path : route.label.toString()
+  return `${id}::${JSON.stringify(params)}`
 }
 
 export async function resolveLabel(
@@ -150,7 +205,7 @@ export async function resolveLabel(
   params: RouteParams,
   pathname: string
 ): Promise<string> {
-  const key = cacheKey(route.path, params)
+  const key = cacheKey(route, params)
   const ttl = route.cacheTtl ?? Infinity
   const cached = labelCache.get(key)
 
@@ -174,39 +229,72 @@ export function clearLabelCache(): void {
 }
 
 /**
- * v2: Invalidate cache for a specific path + params combination.
+ * Invalidate cache for a specific route + params combination.
  * Call after mutations so the next navigation re-fetches the label.
- * @example invalidateLabelCache('/products/:id', { id: '42' })
  */
-export function invalidateLabelCache(path: string, params: RouteParams = {}): void {
-  labelCache.delete(cacheKey(path, params))
+export function invalidateLabelCache(route: RouteConfig, params: RouteParams = {}): void {
+  labelCache.delete(cacheKey(route, params))
 }
 
-// ─── Breadcrumb builder ───────────────────────
+// ─── Breadcrumb builder (blocking — v1/v2 compatible) ─────
 
+/**
+ * Build the full resolved breadcrumb list, awaiting every label before
+ * returning. Kept for backward compatibility — prefer
+ * `buildBreadcrumbsProgressive` for better perceived performance.
+ */
 export async function buildBreadcrumbs(
   pathname: string,
   routes: RouteConfig[]
 ): Promise<BreadcrumbItem[]> {
+  let final: BreadcrumbItem[] = []
+  await buildBreadcrumbsProgressive(pathname, routes, (items) => {
+    final = items
+  })
+  return final
+}
+
+// ─── Breadcrumb builder (progressive — v3) ────
+
+/**
+ * v3: Build breadcrumbs progressively. Static labels resolve and render
+ * immediately; async labels render with `isLoading: true` first, then the
+ * `onUpdate` callback fires again as each one resolves independently —
+ * no more "block the whole trail until the slowest label loads".
+ */
+export async function buildBreadcrumbsProgressive(
+  pathname: string,
+  routes: RouteConfig[],
+  onUpdate?: (items: BreadcrumbItem[]) => void
+): Promise<BreadcrumbItem[]> {
   const segments = parsePathSegments(pathname, routes)
   const visible = segments.filter((s) => s.route && !s.route.hidden)
 
-  return Promise.all(
-    visible.map(async (seg, idx) => {
-      const label = seg.route
-        ? await resolveLabel(seg.route, seg.params, seg.path)
-        : seg.path
+  const items: BreadcrumbItem[] = visible.map((seg, idx) => {
+    const isAsync = !!seg.route && typeof seg.route.label !== 'string'
+    return {
+      path: seg.path,
+      label: isAsync ? '' : seg.route ? (seg.route.label as string) : seg.path,
+      params: seg.params,
+      isLast: idx === visible.length - 1,
+      icon: seg.route?.icon,
+      route: seg.route ?? undefined,
+      isLoading: isAsync,
+    }
+  })
 
-      return {
-        path: seg.path,
-        label,
-        params: seg.params,
-        isLast: idx === visible.length - 1,
-        icon: seg.route?.icon,
-        route: seg.route ?? undefined,
-      } satisfies BreadcrumbItem
+  onUpdate?.(items)
+
+  await Promise.all(
+    visible.map(async (seg, idx) => {
+      if (!seg.route || typeof seg.route.label === 'string') return
+      const label = await resolveLabel(seg.route, seg.params, seg.path)
+      items[idx] = { ...items[idx], label, isLoading: false }
+      onUpdate?.([...items])
     })
   )
+
+  return items
 }
 
 // ─── SEO ─────────────────────────────────────

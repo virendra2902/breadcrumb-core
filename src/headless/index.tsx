@@ -1,7 +1,7 @@
 'use client'
 
 // ─────────────────────────────────────────────
-// breadcrumb-core · headless  v2.0.0
+// auto-breadcrumb · headless  v3.0.0
 // ─────────────────────────────────────────────
 
 import {
@@ -14,8 +14,10 @@ import {
   type ReactNode,
 } from 'react'
 import {
-  buildBreadcrumbs,
+  buildBreadcrumbsProgressive,
   generateJsonLd,
+  stripLocalePrefix,
+  withLocalePrefix,
   type BreadcrumbItem,
   type RouteConfig,
 } from '../core'
@@ -25,8 +27,8 @@ import {
 interface BreadcrumbContextValue {
   items: BreadcrumbItem[]
   isLoading: boolean
-  /** v2: Full navigation history of breadcrumb item arrays */
   history: BreadcrumbItem[][]
+  locale: string | null
 }
 
 const BreadcrumbContext = createContext<BreadcrumbContextValue | null>(null)
@@ -37,16 +39,22 @@ export interface BreadcrumbProviderProps {
   routes: RouteConfig[]
   pathname: string
   children: ReactNode
-  /**
-   * v2: Called after breadcrumbs resolve on every navigation.
-   * Useful for analytics, logging, or syncing external state.
-   */
+  /** Called after breadcrumbs resolve on every navigation */
   onNavigate?: (items: BreadcrumbItem[], pathname: string) => void
-  /**
-   * v2: Max number of navigation states to keep in history.
-   * Defaults to 20.
-   */
+  /** Max navigation snapshots kept in history. Default: 20 */
   maxHistory?: number
+  /**
+   * v3: List of i18n locale prefixes to strip from the pathname before matching.
+   * Locale is re-applied to each item's path automatically.
+   * @example locales={['en', 'fr', 'de', 'ja']}
+   */
+  locales?: string[]
+  /**
+   * v3: Transform every resolved label before it is rendered.
+   * Runs after async resolution and caching.
+   * @example transformLabel={(label) => label.toUpperCase()}
+   */
+  transformLabel?: (label: string, item: Omit<BreadcrumbItem, 'label'>) => string
 }
 
 export function BreadcrumbProvider({
@@ -55,10 +63,13 @@ export function BreadcrumbProvider({
   children,
   onNavigate,
   maxHistory = 20,
+  locales,
+  transformLabel,
 }: BreadcrumbProviderProps) {
   const [items, setItems] = useState<BreadcrumbItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [history, setHistory] = useState<BreadcrumbItem[][]>([])
+  const [locale, setLocale] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
 
   const resolve = useCallback(async () => {
@@ -67,22 +78,47 @@ export function BreadcrumbProvider({
     abortRef.current = controller
 
     setIsLoading(true)
-    try {
-      const resolved = await buildBreadcrumbs(pathname, routes)
-      if (!controller.signal.aborted) {
-        setItems(resolved)
-        setHistory((prev) => {
-          const next = [...prev, resolved]
-          return next.length > maxHistory ? next.slice(next.length - maxHistory) : next
-        })
-        onNavigate?.(resolved, pathname)
-      }
-    } catch {
-      // Aborted — ignore
-    } finally {
-      if (!controller.signal.aborted) setIsLoading(false)
+
+    // Strip locale prefix before matching
+    let effectivePath = pathname
+    let detectedLocale: string | null = null
+    if (locales && locales.length > 0) {
+      const stripped = stripLocalePrefix(pathname, locales)
+      effectivePath = stripped.rest
+      detectedLocale = stripped.locale
     }
-  }, [pathname, routes, onNavigate, maxHistory])
+    setLocale(detectedLocale)
+
+    try {
+      await buildBreadcrumbsProgressive(effectivePath, routes, (progressItems) => {
+        if (controller.signal.aborted) return
+
+        // Re-apply locale to paths and run transformLabel
+        const withLocale = progressItems.map((item) => {
+          const localedPath = withLocalePrefix(item.path, detectedLocale)
+          const transformed =
+            !item.isLoading && transformLabel
+              ? transformLabel(item.label, { ...item, path: localedPath })
+              : item.label
+          return { ...item, path: localedPath, label: transformed }
+        })
+
+        setItems(withLocale)
+
+        // Only fire onNavigate + history when fully resolved
+        if (!withLocale.some((i) => i.isLoading)) {
+          setHistory((prev) => {
+            const next = [...prev, withLocale]
+            return next.length > maxHistory ? next.slice(-maxHistory) : next
+          })
+          onNavigate?.(withLocale, pathname)
+          setIsLoading(false)
+        }
+      })
+    } catch {
+      // aborted
+    }
+  }, [pathname, routes, onNavigate, maxHistory, locales, transformLabel])
 
   useEffect(() => {
     resolve()
@@ -90,7 +126,7 @@ export function BreadcrumbProvider({
   }, [resolve])
 
   return (
-    <BreadcrumbContext.Provider value={{ items, isLoading, history }}>
+    <BreadcrumbContext.Provider value={{ items, isLoading, history, locale }}>
       {children}
     </BreadcrumbContext.Provider>
   )
@@ -100,9 +136,7 @@ export function BreadcrumbProvider({
 
 function useBreadcrumbContext(): BreadcrumbContextValue {
   const ctx = useContext(BreadcrumbContext)
-  if (!ctx) {
-    throw new Error('[auto-breadcrumb] Hook must be used inside <BreadcrumbProvider>.')
-  }
+  if (!ctx) throw new Error('[auto-breadcrumb] Hook must be used inside <BreadcrumbProvider>.')
   return ctx
 }
 
@@ -111,57 +145,57 @@ export function useBreadcrumb(): BreadcrumbItem[] {
   return useBreadcrumbContext().items
 }
 
-/** Returns true while async labels are resolving */
+/** Returns true while any async label is still resolving */
 export function useBreadcrumbLoading(): boolean {
   return useBreadcrumbContext().isLoading
 }
 
-/**
- * v2: Returns the navigation history as an array of breadcrumb item arrays.
- * Each entry is a snapshot of the breadcrumb at the time of navigation.
- * @example
- * const history = useBreadcrumbHistory()
- * const previous = history[history.length - 2]
- */
+/** Returns the navigation history as snapshots of BreadcrumbItem arrays */
 export function useBreadcrumbHistory(): BreadcrumbItem[][] {
   return useBreadcrumbContext().history
+}
+
+/**
+ * v3: Returns the currently active (last) route item.
+ * Shorthand for useBreadcrumb().at(-1).
+ */
+export function useActiveRoute(): BreadcrumbItem | null {
+  const items = useBreadcrumbContext().items
+  return items.length > 0 ? items[items.length - 1] : null
+}
+
+/**
+ * v3: Returns the detected i18n locale (e.g. "fr") or null when no
+ * locale prefix was found. Only relevant when `locales` prop is set.
+ */
+export function useBreadcrumbLocale(): string | null {
+  return useBreadcrumbContext().locale
 }
 
 // ─── Component ────────────────────────────────
 
 export interface AutoBreadcrumbProps {
-  /** Element between items. Default: "/" */
   separator?: ReactNode
-  /** Collapse middle items when total exceeds this number */
   maxItems?: number
-  /** Whether to include the root "/" item. Default: true */
   showHome?: boolean
-  /** Icon shown for the home item */
   homeIcon?: ReactNode
-  /** CSS class on the <nav> wrapper */
   className?: string
-  /** Sync document.title with the breadcrumb trail */
   syncDocumentTitle?: boolean
-  /** App name appended to synced title: "iPhone 15 — Products — MyApp" */
   appName?: string
-  /** Inject Schema.org BreadcrumbList JSON-LD for SEO */
   injectJsonLd?: boolean
-  /** Base URL used in JSON-LD item URLs */
   baseUrl?: string
-  /** Custom item renderer */
   renderItem?: (item: BreadcrumbItem, isLast: boolean) => ReactNode
-  /** Rendered while async labels are resolving */
+  /** v3: Per-item skeleton. Receives the loading item so you can size it */
+  renderItemSkeleton?: (item: BreadcrumbItem) => ReactNode
+  /** Legacy: full-replacement skeleton (still supported) */
   renderSkeleton?: () => ReactNode
-  /**
-   * v2: aria-label for the <nav> element.
-   * Defaults to "breadcrumb". Change when you have multiple navs on a page.
-   */
   ariaLabel?: string
-  /**
-   * v2: Called when a breadcrumb item is clicked.
-   * Return false to prevent default link navigation.
-   */
   onItemClick?: (item: BreadcrumbItem) => boolean | void
+  /**
+   * v3: When true, items with isLoading=true render an inline skeleton
+   * rather than blocking the entire breadcrumb. Default: true
+   */
+  progressiveLoading?: boolean
 }
 
 export function AutoBreadcrumb({
@@ -174,92 +208,91 @@ export function AutoBreadcrumb({
   injectJsonLd = false,
   baseUrl = '',
   renderItem,
+  renderItemSkeleton,
   renderSkeleton,
   ariaLabel = 'breadcrumb',
   onItemClick,
+  progressiveLoading = true,
 }: AutoBreadcrumbProps) {
   const items = useBreadcrumb()
   const isLoading = useBreadcrumbLoading()
 
-  // Sync document title
   useEffect(() => {
     if (!syncDocumentTitle || items.length === 0) return
-    const parts = [...items].reverse().map((i) => i.label)
+    const ready = items.filter((i) => !i.isLoading)
+    if (ready.length === 0) return
+    const parts = [...ready].reverse().map((i) => i.label)
     if (appName) parts.push(appName)
     document.title = parts.join(' — ')
   }, [items, syncDocumentTitle, appName])
 
-  if (isLoading && renderSkeleton) return <>{renderSkeleton()}</>
+  // Full-replacement skeleton (legacy / no progressive)
+  if (!progressiveLoading && isLoading && renderSkeleton) return <>{renderSkeleton()}</>
 
   let visible = items
-
-  if (!showHome && visible[0]?.path === '/') {
-    visible = visible.slice(1)
-  }
+  if (!showHome && visible[0]?.path === '/') visible = visible.slice(1)
 
   if (maxItems && visible.length > maxItems) {
     const head = visible.slice(0, 1)
     const tail = visible.slice(visible.length - (maxItems - 2))
-    const ellipsis: BreadcrumbItem = {
-      path: '...',
-      label: '…',
-      params: {},
-      isLast: false,
-    }
+    const ellipsis: BreadcrumbItem = { path: '...', label: '…', params: {}, isLast: false }
     visible = [...head, ellipsis, ...tail]
   }
 
   const handleClick = (item: BreadcrumbItem) => (e: React.MouseEvent) => {
     if (!onItemClick) return
-    const result = onItemClick(item)
-    if (result === false) e.preventDefault()
+    if (onItemClick(item) === false) e.preventDefault()
   }
 
-  const defaultRenderItem = (item: BreadcrumbItem, isLast: boolean) =>
-    isLast ? (
+  const defaultSkeleton = (_item: BreadcrumbItem) => (
+    <span
+      style={{
+        display: 'inline-block',
+        width: '64px',
+        height: '0.75em',
+        borderRadius: '4px',
+        background: 'linear-gradient(90deg,#e5e7eb 25%,#f3f4f6 50%,#e5e7eb 75%)',
+        backgroundSize: '200% 100%',
+        animation: '_bcShimmer 1.4s ease-in-out infinite',
+        verticalAlign: 'middle',
+      }}
+    />
+  )
+
+  const skeletonRenderer = renderItemSkeleton ?? defaultSkeleton
+
+  const defaultRenderItem = (item: BreadcrumbItem, isLast: boolean) => {
+    if (item.isLoading && progressiveLoading) return skeletonRenderer(item)
+    return isLast ? (
       <span aria-current="page">{item.label}</span>
     ) : (
-      <a
-        href={item.path}
-        style={{ textDecoration: 'none', color: 'inherit' }}
-        onClick={handleClick(item)}
-      >
+      <a href={item.path} style={{ textDecoration: 'none', color: 'inherit' }} onClick={handleClick(item)}>
         {item.label}
       </a>
     )
+  }
 
   const render = renderItem ?? defaultRenderItem
 
   return (
     <nav aria-label={ariaLabel} className={className}>
-      {injectJsonLd && items.length > 0 && (
+      <style>{`@keyframes _bcShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
+      {injectJsonLd && items.filter(i => !i.isLoading).length > 0 && (
         <script
           type="application/ld+json"
           // eslint-disable-next-line react/no-danger
-          dangerouslySetInnerHTML={{ __html: generateJsonLd(items, baseUrl) }}
+          dangerouslySetInnerHTML={{
+            __html: generateJsonLd(items.filter((i) => !i.isLoading), baseUrl),
+          }}
         />
       )}
-      <ol
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          listStyle: 'none',
-          margin: 0,
-          padding: 0,
-        }}
-      >
+      <ol style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', listStyle: 'none', margin: 0, padding: 0 }}>
         {visible.map((item, idx) => (
-          <li
-            key={item.path + idx}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-          >
-            {item.icon && <span aria-hidden="true">{item.icon}</span>}
+          <li key={item.path + idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {item.icon && !item.isLoading && <span aria-hidden="true">{item.icon}</span>}
             {render(item, item.isLast)}
             {idx < visible.length - 1 && (
-              <span aria-hidden="true" style={{ opacity: 0.4, userSelect: 'none' }}>
-                {separator}
-              </span>
+              <span aria-hidden="true" style={{ opacity: 0.4, userSelect: 'none' }}>{separator}</span>
             )}
           </li>
         ))}

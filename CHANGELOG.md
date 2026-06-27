@@ -1,148 +1,158 @@
 # Changelog
 
-All notable changes to `breadcrumb-core ` are documented here.
+All notable changes to `breadcrumb-core` are documented here.
 This project follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [2.0.0] — 2026-04-27
+## [3.0.0] — 2026-04-27
 
 ### ✨ New features
 
-#### Wildcard / splat route support
-Routes can now end with `*` to match any trailing segments:
-```ts
-{ path: '/docs/*', label: 'Docs' }
-// Matches: /docs/getting-started, /docs/api/reference, etc.
-// Wildcard segment available as params['*']
+#### Progressive per-item loading
+In v1/v2 the entire breadcrumb blocked on the slowest async label. In v3, static labels render instantly and each async label resolves independently — you see `Home / Products / ▓▓▓▓ / Reviews` immediately, then the skeleton swaps to `iPhone 15 Pro` when it arrives:
+
+```tsx
+// Already on by default — nothing to change
+<AutoBreadcrumb progressiveLoading />
+
+// Custom per-item skeleton
+<AutoBreadcrumb
+  renderItemSkeleton={(item) => (
+    <span className="skeleton" style={{ width: item.isLast ? 100 : 60 }} />
+  )}
+/>
 ```
 
-#### Optional route params
-Named params can be made optional with `?`:
-```ts
-{ path: '/shop/:category?', label: ({ params }) => params.category ?? 'All' }
-```
+#### Custom route matchers — RegExp & function
+The `path` field now accepts three forms:
 
-#### Cache TTL per route (`cacheTtl`)
-Control how long a resolved async label is cached before being re-fetched:
 ```ts
+// String (unchanged)
+{ path: '/products/:id', label: 'Product' }
+
+// RegExp with named groups (v3)
+{ path: /^\/p\/(?<id>\d+)$/, label: ({ params }) => `Product ${params.id}` }
+
+// Fully custom function (v3)
 {
-  path: '/products/:id',
-  label: async ({ params }) => fetchProductName(params.id),
-  cacheTtl: 60_000, // re-fetch after 60 seconds
+  path: (pathname) => {
+    const m = pathname.match(/^\/items-(\w+)$/)
+    return m ? { slug: m[1] } : null
+  },
+  label: ({ params }) => `Item: ${params.slug}`,
 }
 ```
 
-#### `invalidateLabelCache` utility
-Imperatively invalidate a cached label after a mutation:
-```ts
-import { invalidateLabelCache } from 'breadcrumb-core'
+#### i18n locale-prefix stripping
+Automatically strip and re-apply locale prefixes without defining separate routes per locale:
 
-await updateProduct(id, { name: 'New Name' })
-invalidateLabelCache('/products/:id', { id })
+```tsx
+// Works for /en/products/42 and /fr/products/42 with the same routes
+<BreadcrumbProvider routes={routes} locales={['en', 'fr', 'de', 'ja']}>
+
+// Read the detected locale anywhere
+const locale = useBreadcrumbLocale() // → 'fr'
 ```
 
-#### `onMatch` per route
-Fire a callback whenever a route segment is matched — useful for analytics:
-```ts
-{
-  path: '/products/:id',
-  label: 'Product',
-  onMatch: ({ params, pathname }) => analytics.page(pathname, params),
-}
-```
+#### `transformLabel` prop
+Post-process every resolved label globally — useful for title-casing, translations, or appending meta:
 
-#### `onNavigate` on `<BreadcrumbProvider>`
-Fires after every navigation with the resolved items array:
 ```tsx
 <BreadcrumbProvider
   routes={routes}
-  onNavigate={(items, pathname) => {
-    analytics.track('page_view', { breadcrumb: items.map(i => i.label) })
-  }}
->
+  transformLabel={(label) => label.toUpperCase()}
+/>
+
+// Or with i18n:
+<BreadcrumbProvider
+  routes={routes}
+  transformLabel={(label) => t(label)}
+/>
 ```
 
-#### `useBreadcrumbHistory()` hook
-Access a rolling history of breadcrumb snapshots:
+#### `CollapsibleBreadcrumb` component
+Improves on v2's static `maxItems` — collapsed items expand inline when clicked:
+
+```tsx
+import { CollapsibleBreadcrumb } from 'breadcrumb-core/ui'
+
+// Home / ••• / Reviews   ← click ••• to expand
+<CollapsibleBreadcrumb collapseAt={4} theme="light" />
+```
+
+#### `useActiveRoute()` hook
+Shorthand for `useBreadcrumb().at(-1)` — the currently active route item:
+
 ```ts
-const history = useBreadcrumbHistory()
-const previous = history[history.length - 2]
+const active = useActiveRoute()
+// → { path: '/products/42/reviews', label: 'Reviews', ... } | null
 ```
 
-#### `ariaLabel` prop on `<AutoBreadcrumb>`
-Customize the `aria-label` on the `<nav>` element — important when you have multiple navs on one page:
-```tsx
-<AutoBreadcrumb ariaLabel="Product navigation" />
-```
+#### `useBreadcrumbLocale()` hook
+Read the detected i18n locale inside any component:
 
-#### `onItemClick` prop on `<AutoBreadcrumb>`
-Intercept clicks on breadcrumb items. Return `false` to prevent navigation:
-```tsx
-<AutoBreadcrumb onItemClick={(item) => {
-  analytics.click(item.path)
-  // return false to block navigation
-}} />
-```
-
-#### `pill` theme in `breadcrumb-core/ui`
-New pill-style visual theme:
-```tsx
-import { StyledBreadcrumb } from 'breadcrumb-core/ui'
-<StyledBreadcrumb theme="pill" />
-```
-
-#### `route` on `BreadcrumbItem`
-The matched `RouteConfig` is now attached to each `BreadcrumbItem` so custom renderers can read route metadata:
 ```ts
-const items = useBreadcrumb()
-items.forEach(item => {
-  console.log(item.route?.cacheTtl)
+const locale = useBreadcrumbLocale() // → 'en' | 'fr' | null
+```
+
+#### `buildBreadcrumbsProgressive` utility
+New core function for framework-agnostic progressive resolution:
+
+```ts
+import { buildBreadcrumbsProgressive } from 'breadcrumb-core'
+
+await buildBreadcrumbsProgressive(pathname, routes, (items) => {
+  // called immediately with skeletons, then again per resolved async label
+  render(items)
 })
 ```
 
-#### `maxHistory` on `<BreadcrumbProvider>`
-Control how many navigation snapshots `useBreadcrumbHistory()` retains (default: 20):
-```tsx
-<BreadcrumbProvider routes={routes} maxHistory={10}>
+#### `invalidateLabelCache` accepts `RouteConfig` directly
+```ts
+// v2 (string path):
+invalidateLabelCache('/products/:id', { id: '42' })
+
+// v3 (RouteConfig or string path both work):
+invalidateLabelCache(routes.find(r => r.path === '/products/:id')!, { id: '42' })
 ```
 
-### 🔧 Improvements
+#### JSON-LD only includes resolved items
+In v3, the `injectJsonLd` script only lists items that have finished resolving — no empty-label entries during progressive loading.
 
-- Label resolver now receives `pathname` (full current path) in addition to `params`
-- `BreadcrumbSkeleton` now uses varied widths per item for a more natural shimmer
-- `resolveLabel` now correctly handles TTL expiry with a timestamp comparison
-- All adapters now forward `...rest` props so `onNavigate` / `maxHistory` pass through cleanly
-- `useBreadcrumbHistory` exported from all adapter subpaths
+### 🔧 Improvements
+- `progressiveLoading` defaults to `true` — existing code benefits automatically
+- `renderItemSkeleton` is preferred over `renderSkeleton` for progressive UX; `renderSkeleton` still works as a full-replacement fallback
+- `syncDocumentTitle` updates incrementally as labels resolve
+- All adapters pass through `locales` and `transformLabel` automatically via `...rest`
 
 ### 💥 Breaking changes
+None. v3 is fully backward compatible with v2. All new features are additive or opt-in.
 
-- `label` function signature changed: `({ params })` → `({ params, pathname })`
-  
-  **Before:**
-  ```ts
-  label: ({ params }) => fetchName(params.id)
-  ```
-  **After (both work — `pathname` is optional to destructure):**
-  ```ts
-  label: ({ params }) => fetchName(params.id)           // still works
-  label: ({ params, pathname }) => fetchName(params.id) // also works
-  ```
-  No code change required — `pathname` is additive, existing destructuring still compiles.
+---
+
+## [2.0.0] — 2026-04-26
+
+### Added
+- Wildcard routes (`/docs/*`) and optional params (`:id?`)
+- `cacheTtl` per route + `invalidateLabelCache()` utility
+- `onMatch` per route for analytics
+- `onNavigate` on `<BreadcrumbProvider>`
+- `useBreadcrumbHistory()` hook
+- `ariaLabel` and `onItemClick` props on `<AutoBreadcrumb>`
+- `pill` theme in `/ui`
+- `route` field on `BreadcrumbItem`
+- `maxHistory` on `<BreadcrumbProvider>`
 
 ---
 
 ## [1.0.0] — 2026-04-26
 
 ### Initial release
-
 - `BreadcrumbProvider` + `AutoBreadcrumb` component
 - Async label resolution with cache
-- Schema.org JSON-LD injection
-- `document.title` sync
-- `maxItems` collapsing with `…`
-- Hidden route segments
+- Schema.org JSON-LD injection, `document.title` sync
+- `maxItems` collapsing, hidden route segments
 - Adapters: `react-router`, `next`, `tanstack-router`, `headless`, `ui`
 - `useBreadcrumb()` and `useBreadcrumbLoading()` hooks
-- `StyledBreadcrumb` with light / dark / minimal themes
-- `BreadcrumbSkeleton` shimmer component
+- `StyledBreadcrumb` with light / dark / minimal themes + `BreadcrumbSkeleton`
